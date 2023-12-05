@@ -4,7 +4,9 @@ import json
 import queue
 from threading import Thread, Event
 from time import sleep
+import requests
 
+import secrets
 
 def produce_values(nmr: NMEAReader, que: queue.Queue, shutdown: Event):
   for (raw_data, parsed_data) in nmr:
@@ -38,7 +40,25 @@ def send_values(que: queue.Queue, shutdown: Event):
   while not shutdown.is_set():
     if que.empty is False:
       data = que.get()
-      print(json.dumps(data))
+
+      t_set = {}
+      
+      lat_data = {'n':'lat','dt':'double'}
+      lon_data = {'n':'lon','dt':'double'}
+      alt_data = {'n':'alt','dt':'double'}
+
+      lat_data['value'] = data.get('lat')
+      lon_data['value'] = data.get('lon')
+      alt_data['value'] = data.get('alt')
+
+      t = [lat_data, lon_data, alt_data]
+
+      t_set['t'] = t
+      t_set['id'] = secrets.TELEMETRY_ID
+      t_set['ts'] = data.get('ts')
+
+      print(json.dumps(t_set))
+
       que.task_done()
 
 
