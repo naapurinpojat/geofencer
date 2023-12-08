@@ -5,7 +5,7 @@ use std::io::{self, BufRead, BufReader};
 fn main() {
     // Replace "/dev/EG25.NMEA" with the appropriate device file on your system
     let mut parser = NmeaParser::new();
-    let device_path = "/dev/EG25.NMEA";
+    let device_path = "/dev/rfcomm0";
 
     // Open the device file
     let file = match File::open(&device_path) {
