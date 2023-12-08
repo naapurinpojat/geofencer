@@ -6,8 +6,24 @@ from threading import Thread, Event
 from time import sleep
 import requests
 import redis
+import asyncio
+from gmqtt import Client as MQTTClient
+import ssl
 
 import secrets
+
+USE_MQTT = True
+
+context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+context.load_verify_locations(secrets.CERT_FILE)
+
+async def publish_mqtt(client: MQTTClient, topic: str, data: str):
+  client.publish(topic, data)
+
+def publish_http(topic: str, data: str):
+  url = f'https://{secrets.HTTP_ADAPTER_IP}/http-adapter'
+  response = requests.put(f'{url}/{topic}', auth=(f'{secrets.MY_DEVICE}@{secrets.MY_TENANT}', secrets.MY_PWD), data=data)
+  #print(response)
 
 def add_data_to_stream(stream_name, data):
     redis_client = redis.StrictRedis(host='localhost', port=6379, decode_responses=True)
@@ -81,13 +97,40 @@ def process_values(raw_que: queue.Queue, send_que: queue.Queue, shutdown: Event)
 def send_values(que: queue.Queue, shutdown: Event):
   print("Sending values...")
 
+  client = None
+  async_loop = None
+  if USE_MQTT:
+    # Init MQTT client
+      async_loop = asyncio.new_event_loop()
+      asyncio.set_event_loop(async_loop)
+
+      client = MQTTClient("py_snowdog")
+      client.set_auth_credentials(username=f"{secrets.MY_DEVICE}@{secrets.MY_TENANT}", password=secrets.MY_PWD)
+
+      try:
+        async_loop.run_until_complete(client.connect(secrets.HTTP_ADAPTER_IP, secrets.MQTT_PORT, ssl=context))
+      except Exception as e:
+        print(f"couldn't connect client to mqtt broker \n\n {e}")
+        shutdown_signal.set()
+
+  topic = f"telemetry/{secrets.MY_TENANT}/{secrets.MY_DEVICE}"
+
   while not shutdown.is_set():
     if que.empty() is False:
       data = que.get()
 
       data = json.dumps(data, ensure_ascii=False)
-      response = requests.put(f'https://{secrets.HTTP_ADAPTER_IP}/http-adapter/telemetry/{secrets.MY_TENANT}/{secrets.MY_DEVICE}', auth=(f'{secrets.MY_DEVICE}@{secrets.MY_TENANT}', secrets.MY_PWD), data=data)
+
+      if USE_MQTT:
+        async_loop.run_until_complete(publish_mqtt(client, topic, data))
+      else:
+        publish_http(topic, data)
+
       que.task_done()
+
+  if USE_MQTT:
+    async_loop.run_until_complete(client.disconnect())
+    async_loop.close()
 #    sleep(0.5)
 
 if __name__ == "__main__":
