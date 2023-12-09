@@ -2,9 +2,26 @@ use nmea_parser::*;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
 
+struct GPSData {
+    latitude: f64,
+    longitude: f64,
+    altitude: f64,
+    speed: f64,
+    heading: f64,
+    timestamp: String,
+}
+
 fn main() {
     // Replace "/dev/EG25.NMEA" with the appropriate device file on your system
     let mut parser = NmeaParser::new();
+    let mut gps_data = GPSData {
+        latitude: 0.0,
+        longitude: 0.0,
+        altitude: 0.0,
+        speed: 0.0,
+        heading: 0.0,
+        timestamp: String::new(),
+    };
     let device_path = "/dev/rfcomm0";
 
     // Open the device file
@@ -28,58 +45,64 @@ fn main() {
                 //println!("{}", line);
 
                 if parser.parse_sentence(&line).is_ok() {
-                    match parser.parse_sentence(&line).unwrap() {
-                        ParsedMessage::VesselDynamicData(vdd) => {
+                    match parser.parse_sentence(&line).ok() {
+                        Some(ParsedMessage::VesselDynamicData(vdd)) => {
                             println!("MMSI:    {}", vdd.mmsi);
-                            println!("Speed:   {:.1} kts", vdd.sog_knots.unwrap());
-                            println!("Heading: {}°", vdd.heading_true.unwrap());
+                            println!("Speed:   {:.1} kts", vdd.sog_knots.unwrap_or_default());
+                            println!("Heading: {}°", vdd.heading_true.unwrap_or_default());
+                            gps_data.heading = vdd.heading_true.unwrap_or_default();
                             //println!("");
                         }
-                        ParsedMessage::VesselStaticData(vsd) => {
+                        Some(ParsedMessage::VesselStaticData(vsd)) => {
                             println!("MMSI:  {}", vsd.mmsi);
                             println!("Flag:  {}", vsd.country().unwrap());
                             println!("Name:  {}", vsd.name.unwrap());
                             println!("Type:  {}", vsd.ship_type);
                             //println!("");
                         }
-                        ParsedMessage::Gga(gga) => {
+                        Some(ParsedMessage::Gga(gga)) => {
                             //println!("Source:    {}", gga.source);
-                            println!("Latitude:  {:.3}°", gga.latitude.unwrap());
-                            println!("Longitude: {:.3}°", gga.longitude.unwrap());
+                            println!("Latitude:  {:.3}°", gga.latitude.unwrap_or_default());
+                            println!("Longitude: {:.3}°", gga.longitude.unwrap_or_default());
                             println!("Quality:  {}°", gga.quality);
-                            println!("Satellites: {}", gga.satellite_count.unwrap());
-                            println!("Altitude:   {:.1} m", gga.altitude.unwrap());
+                            println!("Satellites: {}", gga.satellite_count.unwrap_or_default());
+                            println!("Altitude:   {:.1} m", gga.altitude.unwrap_or_default());
+                            gps_data.latitude = gga.latitude.unwrap_or_default();
+                            gps_data.longitude = gga.longitude.unwrap_or_default();
+                            gps_data.altitude = gga.altitude.unwrap_or_default();
 
                             //println!("");
                         }
-                        ParsedMessage::Rmc(rmc) => {
+                        Some(ParsedMessage::Rmc(rmc)) => {
                             //println!("Source:  {}", rmc.source);
-                            println!("Speed:   {:.1} kts", rmc.sog_knots.unwrap());
-                            println!("Bearing: {}°", rmc.bearing.unwrap());
-                            println!("Time:    {}", rmc.timestamp.unwrap());
+                            println!("Speed:   {:.1} kts", rmc.sog_knots.unwrap_or_default());
+                            println!("Bearing: {}°", rmc.bearing.unwrap_or_default());
+                            println!("Time:    {}", rmc.timestamp.unwrap_or_default());
+                            gps_data.timestamp = rmc.timestamp.unwrap_or_default().to_string();
                             //println!("");
                         }
-                        ParsedMessage::Gsa(gsa) => {
+                        Some(ParsedMessage::Gsa(gsa)) => {
                             //println!("Source: {}", gsa.source);
-                            println!("PDOP:   {}", gsa.pdop.unwrap());
-                            println!("HDOP:   {}", gsa.hdop.unwrap());
-                            println!("VDOP:   {}", gsa.vdop.unwrap());
+                            println!("PDOP:   {}", gsa.pdop.unwrap_or_default());
+                            println!("HDOP:   {}", gsa.hdop.unwrap_or_default());
+                            println!("VDOP:   {}", gsa.vdop.unwrap_or_default());
                             //println!("");
                         }
-                        ParsedMessage::Gsv(gsv) => {
+                        Some(ParsedMessage::Gsv(gsv)) => {
                             println!("DBG: {:?}", gsv);
                         }
-                        ParsedMessage::Vtg(vtg) => {
+                        Some(ParsedMessage::Vtg(vtg)) => {
                             //println!("Source: {}", vtg.source);
-                            println!("Bearing: {}°", vtg.cog_true.unwrap());
-                            println!("Speed:   {:.1} kph", vtg.sog_kph.unwrap());
+                            println!("Bearing: {}°", vtg.cog_true.unwrap_or_default());
+                            println!("Speed:   {:.1} kph", vtg.sog_kph.unwrap_or_default());
+                            gps_data.speed = vtg.sog_kph.unwrap_or_default();
                             //println!("");
                         }
-                        ParsedMessage::Incomplete => {
+                        Some(ParsedMessage::Incomplete) => {
                             //println!("data incomplete {:?}", sentence);
                         }
                         _ => {
-                            //println!("{:?}", sentence);
+                            println!("{:?}", line);
                         }
                     }
                 }
