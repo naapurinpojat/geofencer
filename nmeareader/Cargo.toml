@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 nmea-parser = "0.10.0"
+redis = "0.24.0"
