@@ -1,7 +1,7 @@
 from pynmeagps import NMEAReader 
 import asyncio
 import json
-import gmqtt
+import paho.mqtt.client as pahomqtt
 import redis
 from time import sleep
 import ssl
@@ -28,22 +28,20 @@ class MQTTClient:
         self.broker_address = broker_address
         self.broker_port = broker_port
         self.client_id = client_id
-        self.ssl = ssl_file
         self.context = None
 
-        self.async_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.async_loop)
+        self.client = pahomqtt.Client(self.client_id, protocol=pahomqtt.MQTTv5)
 
-        if ssl:
+        if ssl_file:
             self.context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
             self.context.load_verify_locations(ssl_file)
+            self.client.tls_set_context(self.context)
 
-        self.client = gmqtt.Client(self.client_id)
         if username and password:
-            self.client.set_auth_credentials(username, password)
+            self.client.username_pw_set(username, password)
 
         self.client.on_connect = self.on_connect
-        self.client.on_disconnect = self.on_disconnect
+        #self.client.on_disconnect = self.on_disconnect
 
     def on_connect(self, client, userdata, flags, rc):
         self.logger.info(f'Connected to MQTT broker {self.broker_address}:{self.broker_port}')
@@ -64,7 +62,7 @@ class MQTTClient:
         return self.client.is_connected
 
     def connect(self):
-        self.async_loop.run_until_complete(self.client.connect(self.broker_address, self.broker_port, ssl=self.context))
+        self.client.connect(self.broker_address, self.broker_port)
 
     def publish(self, topic, data):
         self.client.publish(topic, data)
@@ -101,6 +99,9 @@ class RedisClient:
     
     def add_message(self, message):
         self.client.xadd(self.topic, message)
+
+    def close(self):
+        self.client.close()
 
 class MQTTPublisher(Thread):
     def __init__(self, client: MQTTClient, topic: str, redis_client, shutdown_event: Event):
@@ -143,6 +144,7 @@ class MQTTPublisher(Thread):
             return iot_json
         logger.info("MQTTPublisher starting")
         last_connection_check = g_time
+
         self.client.connect()
 
         while not self.shutdown_event.is_set():
@@ -168,7 +170,7 @@ class MQTTPublisher(Thread):
                 logger.critical("MQTT client not connected")
 
                 if not self.client.keep_connected():
-                    return
+                    self.shutdown_event.set()
                 else:
                     logger.info("Reconnected succesfully")
 
@@ -181,13 +183,14 @@ class NMEAStreamReader(Thread):
         super().__init__()
         self.shutdown_event = shutdown_event
         self.queue = data_que
-
-        stream = open(path, 'rb')
-        self.nmr = NMEAReader(stream, nmeaonly=True)
+        self.path = path
 
     def run(self):
         logger.info("NMEAStreamReader starting")
         data_to_process = ['GPGGA', 'GPVTG']
+
+        stream = open(self.path, 'rb')
+        self.nmr = NMEAReader(stream, nmeaonly=True)
 
         for (raw_data, parsed_data) in self.nmr:
             try:
@@ -200,7 +203,9 @@ class NMEAStreamReader(Thread):
 
             if self.shutdown_event.is_set():
                 break
+
         logger.info("NMEAStreamReader shutting down")
+        stream.close()
 
 class RedisPublisher(Thread):
     def __init__(self, client: RedisClient, data_que: queue.Queue, shutdown_event: Event):
@@ -258,11 +263,12 @@ def main():
     redis_consumer_group = "redis_iot_group"
     redis_topic = "snowdog:location"
 
+    mqtt_client_name = "py_snowdog"
     mqtt_topic = f"telemetry/{secrets.MY_TENANT}/{secrets.MY_DEVICE}"
 
     io_queue = queue.Queue(maxsize=100)
 
-    mqtt_client = MQTTClient(secrets.HTTP_ADAPTER_IP, secrets.MQTT_PORT, "py_snowdog", f"{secrets.MY_DEVICE}@{secrets.MY_TENANT}", secrets.MY_PWD, ssl_file=secrets.CERT_FILE)
+    mqtt_client = MQTTClient(secrets.HTTP_ADAPTER_IP, secrets.MQTT_PORT, mqtt_client_name, f"{secrets.MY_DEVICE}@{secrets.MY_TENANT}", secrets.MY_PWD, ssl_file=secrets.CERT_FILE)
     redis_client = RedisClient('localhost', 6379, redis_topic, redis_consumer_group, redis_consumer_name)
 
     nmeareader_thread = NMEAStreamReader('/dev/EG25.NMEA', io_queue, shutdown_event)
@@ -280,12 +286,15 @@ def main():
             g_date = datetime.date.today()
             sleep(1)
         except KeyboardInterrupt:
-            logger.info("\nTerminated by keyboard... Shutting down")
+            logger.info("Terminated by keyboard... Shutting down")
             shutdown_event.set()
             
     nmeareader_thread.join()
     redis_publisher_thread.join()
     mqtt_publisher_thread.join()
+
+    mqtt_client.disconnect()
+    redis_client.close()
 
 
 if __name__ == "__main__":
