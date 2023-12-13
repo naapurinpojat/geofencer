@@ -1,237 +1,292 @@
 from pynmeagps import NMEAReader 
-from datetime import date, datetime
-import json
-import queue
-from threading import Thread, Event
-from time import sleep
-import redis
 import asyncio
-from gmqtt import Client as MQTTClient
-import requests
+import json
+import gmqtt
+import redis
+from time import sleep
 import ssl
 import logging
+from threading import Thread, Event, Lock
+import queue
+import datetime
 
 import secrets
 
-USE_MQTT = True
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.addHandler(logging.StreamHandler())
 
-logger = None
-g_log_level = logging.INFO
+g_time = None
+g_date = None
 
-def set_logger(level: int, name=None):
-  global logger
+MS_10 = 0.01
+MS_100 = 0.1
 
-  logger = logging.getLogger(name)
-  logger.addHandler(logging.StreamHandler())
-  logger.setLevel(level)
+class MQTTClient:
+    def __init__(self, broker_address, broker_port, client_id, username=None, password=None, ssl_file=None):
+        self.logger = logging.getLogger(__name__)
+        self.broker_address = broker_address
+        self.broker_port = broker_port
+        self.client_id = client_id
+        self.ssl = ssl_file
+        self.context = None
 
-async def publish_mqtt(client: MQTTClient, topic: str, data: str):
-  client.publish(topic, data)
+        self.async_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.async_loop)
 
-def publish_http(topic: str, data: str):
-  url = f'https://{secrets.HTTP_ADAPTER_IP}/http-adapter'
-  response = requests.put(f'{url}/{topic}', auth=(f'{secrets.MY_DEVICE}@{secrets.MY_TENANT}', secrets.MY_PWD), data=data)
-  logger.debug(response)
+        if ssl:
+            self.context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+            self.context.load_verify_locations(ssl_file)
 
-def format_ts(raw_ts):
-  ts_raw = f"{date.today()} {raw_ts}"
-  return f"{datetime.strptime(ts_raw, '%Y-%m-%d %H:%M:%S').isoformat()}.000Z"
+        self.client = gmqtt.Client(self.client_id)
+        if username and password:
+            self.client.set_auth_credentials(username, password)
 
-def extract_data(raw_data):
-  data = {}
-  try:
-    if raw_data.identity == 'GPVTG':
-      if raw_data.quality == 1:
-        data['ts'] = format_ts(raw_data.time)
-        data['identity'] = raw_data.identity
-        data['speed'] = raw_data.sogk
-        logger.debug(data)
+        self.client.on_connect = self.on_connect
+        self.client.on_disconnect = self.on_disconnect
 
-    if raw_data.identity == 'GPGGA':
-      if raw_data.quality == 1:
-        data['ts'] = format_ts(raw_data.time)
-        data['identity'] = raw_data.identity
-        data['lat'] = raw_data.lat
-        data['lon'] = raw_data.lon
-        data['alt'] = raw_data.alt
-        logger.debug(data)
-  except Exception as e:
-    data = None
-    logger.debug(e)
+    def on_connect(self, client, userdata, flags, rc):
+        self.logger.info(f'Connected to MQTT broker {self.broker_address}:{self.broker_port}')
+        
+    def on_disconnect(self, client, userdata, rc):
+        self.logger.warning('Disconnected from MQTT broker')
 
-  return data
+    def keep_connected(self):
+        if not self.client.is_connected():
+            try:
+                self.client.reconnect()
+            except Exception as e:
+                self.logger.warning(f'Failed to reconnect: {e}')
+                return False
+        return True
 
-def format_iot_ticket(data):
-  iot_json = {}
+    def is_connected(self):
+        return self.client.is_connected
 
-  if data.get('identity') == 'GPGGA':
-    t_set = {}
-    
-    lat_data = {'n':'lat','dt':'double'}
-    lon_data = {'n':'lon','dt':'double'}
-    alt_data = {'n':'alt','dt':'double'}
+    def connect(self):
+        self.async_loop.run_until_complete(self.client.connect(self.broker_address, self.broker_port, ssl=self.context))
 
-    lat_data['value'] = data.get('lat')
-    lon_data['value'] = data.get('lon')
-    alt_data['value'] = data.get('alt')
+    def publish(self, topic, data):
+        self.client.publish(topic, data)
 
-    t = [lat_data, lon_data, alt_data]
+class RedisClient:
+    def __init__(self, host, port, topic, consumer_group, consumer_name):
+        self.host = host
+        self.port = port
+        self.topic = topic
+        self.consumer_group = consumer_group
+        self.consumer_name = consumer_name
 
-    t_set['t'] = t
-    t_set['id'] = secrets.TELEMETRY_ID
-    t_set['ts'] = data.get('ts')
+        self.client = redis.Redis(host=host, port=port, decode_responses=True)
 
-    iot_json = {'t_set':[t_set]}
-
-  if data.get('identity') == 'GPVTG':
-    speed_data = {'n':'speed', 'dt':'double'}
-    speed_data['data':[{data.get('ts'): data.get('speed')}]]
-    iot_json = {'t':[speed_data]}
-
-  return iot_json
-
-def add_data_to_stream(stream_name, data):
-  redis_client = redis.StrictRedis(host='localhost', port=6379, decode_responses=True)
-
-  # Add data to the stream
-  redis_client.xadd(stream_name, data)
-
-def read_values_from_device(nmr: NMEAReader, raw_que: queue.Queue, shutdown: Event):
-  logger.info("Starting reading data from device ...")
-
-  data_to_process = ['GPGGA', 'GPVTG']
-
-  for (raw_data, parsed_data) in nmr:
-    try:
-      if parsed_data.quality == 1:
-        if parsed_data.identity in data_to_process:
-          logger.debug(parsed_data)
-          raw_que.put_nowait(parsed_data)
-    except queue.Full:
-      logger.warning("Previous values not processed yet")
-    except:
-      pass
-
-    # Check if program is interrupted
-    if shutdown.is_set():
-      break
-
-  logger.info("Ending read from device")
-
-def process_values(raw_que: queue.Queue, send_que: queue.Queue, shutdown: Event):
-  logger.info("Start data processing ...")
-
-  while not shutdown.is_set():
-    sleep(0.1)
-    if raw_que.empty() is False:
-      iot_json = {}
-      data_raw = raw_que.get()
-      
-      # do data formatting for visualisation
-      data = extract_data(data_raw)
-
-      raw_que.task_done()
-
-      if data:
-        iot_json = format_iot_ticket(data)
-
-        if data.get('identity') == 'GPGGA':
-          add_data_to_stream('snowdog:location', data)
-        elif data.get('identity') == 'GPVTG':
-          add_data_to_stream('snowdog:speed', data)
-
-      if iot_json:
         try:
-          send_que.put_nowait(iot_json)
-        except queue.Full:
-          pass
+            self.client.xgroup_create(self.topic, self.consumer_group, id=0, mkstream=True)
+        except:
+            logger.debug("Consumer group most likely already existing")
+            pass
 
-  logger.info("Ending data processing")
+        logger.debug("Redis client initialised")
 
-def send_values(que: queue.Queue, shutdown: Event):
-  logger.info("Sending values ...")
+    def read_messages(self, initial=False):
+        count = 1
 
-  client = None
-  async_loop = None
+        messages_ret = []
+        messages = self.client.xreadgroup(self.consumer_group, self.consumer_name, {self.topic: '>'}, count=count)
+        for mes in messages:
+            for mes_id, mes_data in mes[1]:
+                messages_ret.append(mes_data)
+                self.client.xack(mes[0], self.consumer_group, mes_id)
 
-  context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-  context.load_verify_locations(secrets.CERT_FILE)
+        return messages_ret
+    
+    def add_message(self, message):
+        self.client.xadd(self.topic, message)
 
-  if USE_MQTT:
-    # Init MQTT client
-    async_loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(async_loop)
+class MQTTPublisher(Thread):
+    def __init__(self, client: MQTTClient, topic: str, redis_client, shutdown_event: Event):
+        super().__init__()
+        self.client = client
+        self.topic = topic
+        self.shutdown_event = shutdown_event
+        self.redis_client = redis_client
 
-    client = MQTTClient("py_snowdog")
-    client.set_auth_credentials(username=f"{secrets.MY_DEVICE}@{secrets.MY_TENANT}", password=secrets.MY_PWD)
 
-    try:
-      async_loop.run_until_complete(client.connect(secrets.HTTP_ADAPTER_IP, secrets.MQTT_PORT, ssl=context))
-    except Exception as e:
-      logger.critical(f"couldn't connect client to mqtt broker \n {e}")
-      shutdown_signal.set()
+    def run(self): 
+        def format_iot_ticket(data):
+            iot_json = {}
 
-  topic = f"telemetry/{secrets.MY_TENANT}/{secrets.MY_DEVICE}"
+            if data.get('identity') == 'GPGGA':
+                t_set = {}
+                
+                lat_data = {'n':'lat','dt':'double'}
+                lon_data = {'n':'lon','dt':'double'}
+                alt_data = {'n':'alt','dt':'double'}
 
-  while not shutdown.is_set():
-    sleep(0.1)
-    if que.empty() is False:
-      data = que.get()
+                lat_data['value'] = data.get('lat')
+                lon_data['value'] = data.get('lon')
+                alt_data['value'] = data.get('alt')
 
-      data = json.dumps(data, ensure_ascii=False)
+                t = [lat_data, lon_data, alt_data]
 
-      if USE_MQTT:
-        async_loop.run_until_complete(publish_mqtt(client, topic, data))
-      else:
-        publish_http(topic, data)
+                t_set['t'] = t
+                t_set['id'] = secrets.TELEMETRY_ID
+                t_set['ts'] = data.get('ts')
 
-      que.task_done()
+                iot_json = 'location', t_set
 
-  if USE_MQTT:
-    async_loop.run_until_complete(client.disconnect())
-    async_loop.close()
+            if data.get('identity') == 'GPVTG':
+                speed_data = {'n':'speed', 'dt':'double'}
+                speed_data['data':[{data.get('ts'): data.get('speed')}]]
 
-  logger.info("Ending send values thread")
+                iot_json = 'speed', speed_data
+
+            return iot_json
+        logger.info("MQTTPublisher starting")
+        last_connection_check = g_time
+        self.client.connect()
+
+        while not self.shutdown_event.is_set():
+            if self.client.is_connected():
+                messages = self.redis_client.read_messages()
+
+                ts_buffer = []
+
+                for data in messages:
+                    topic, d = format_iot_ticket(data)
+                    if topic == 'location':
+                        ts_buffer.append(d)
+
+                if len(ts_buffer) > 0:
+                    ts_json = json.dumps({'t_set': ts_buffer}, ensure_ascii=False)
+
+                    try:
+                        self.client.publish(self.topic, ts_json)
+                    except Exception as e:
+                        logger.critical(f"Couldn't send data \n {e} \n")
+
+            else:
+                logger.critical("MQTT client not connected")
+
+                if not self.client.keep_connected():
+                    return
+                else:
+                    logger.info("Reconnected succesfully")
+
+            sleep(MS_100)
+        logger.info("MQTTPublisher shutting down")
+
+
+class NMEAStreamReader(Thread):
+    def __init__(self, path: str, data_que: queue.Queue, shutdown_event: Event):
+        super().__init__()
+        self.shutdown_event = shutdown_event
+        self.queue = data_que
+
+        stream = open(path, 'rb')
+        self.nmr = NMEAReader(stream, nmeaonly=True)
+
+    def run(self):
+        logger.info("NMEAStreamReader starting")
+        data_to_process = ['GPGGA', 'GPVTG']
+
+        for (raw_data, parsed_data) in self.nmr:
+            try:
+                if parsed_data.quality == 1:
+                    if parsed_data.identity in data_to_process:
+                        logger.debug(parsed_data)
+                        self.queue.put_nowait(parsed_data)
+            except:
+                pass
+
+            if self.shutdown_event.is_set():
+                break
+        logger.info("NMEAStreamReader shutting down")
+
+class RedisPublisher(Thread):
+    def __init__(self, client: RedisClient, data_que: queue.Queue, shutdown_event: Event):
+        super().__init__()
+        self.client = client
+        self.queue = data_que
+        self.shutdown_event = shutdown_event
+
+    def run(self):
+        def extract_data(raw_data):
+            def format_ts(raw_ts):
+                ts_raw = f"{g_date} {raw_ts}"
+                return f"{datetime.datetime.strptime(ts_raw, '%Y-%m-%d %H:%M:%S').isoformat()}.000Z"
+            
+            data = {}
+            try:
+                if raw_data.identity == 'GPVTG':
+                    data['ts'] = format_ts(raw_data.time)
+                    data['identity'] = raw_data.identity
+                    data['speed'] = raw_data.sogk
+
+                if raw_data.identity == 'GPGGA':
+                    data['ts'] = format_ts(raw_data.time)
+                    data['identity'] = raw_data.identity
+                    data['lat'] = raw_data.lat
+                    data['lon'] = raw_data.lon
+                    data['alt'] = raw_data.alt 
+            except Exception as e:
+                data = None
+                logger.debug(e)
+
+            return data
+        
+        logger.info("RedisPublisher running")
+        while not self.shutdown_event.is_set():
+            if not self.queue.empty():
+                data = self.queue.get()
+                redis_data = extract_data(data)
+                self.queue.task_done()
+
+                if redis_data:
+                    self.client.add_message(redis_data)
+            sleep(MS_100)
+        logger.info("RedisPublisher shutting down")
+
+
+def main():
+    global g_time
+    global g_date
+    g_time = datetime.datetime.now()
+    g_date = datetime.date.today()
+    shutdown_event = Event()
+
+    redis_consumer_name = "redis_iot"
+    redis_consumer_group = "redis_iot_group"
+    redis_topic = "snowdog:location"
+
+    mqtt_topic = f"telemetry/{secrets.MY_TENANT}/{secrets.MY_DEVICE}"
+
+    io_queue = queue.Queue(maxsize=100)
+
+    mqtt_client = MQTTClient(secrets.HTTP_ADAPTER_IP, secrets.MQTT_PORT, "py_snowdog", f"{secrets.MY_DEVICE}@{secrets.MY_TENANT}", secrets.MY_PWD, ssl_file=secrets.CERT_FILE)
+    redis_client = RedisClient('localhost', 6379, redis_topic, redis_consumer_group, redis_consumer_name)
+
+    nmeareader_thread = NMEAStreamReader('/dev/EG25.NMEA', io_queue, shutdown_event)
+    redis_publisher_thread = RedisPublisher(redis_client, io_queue, shutdown_event)
+    mqtt_publisher_thread = MQTTPublisher(mqtt_client, mqtt_topic, redis_client, shutdown_event)
+
+    nmeareader_thread.start()
+    redis_publisher_thread.start()
+    mqtt_publisher_thread.start()
+
+    while not shutdown_event.is_set():
+        try:
+            # Update time in main thread so no need to get that on every thread
+            g_time = datetime.datetime.now()
+            g_date = datetime.date.today()
+            sleep(1)
+        except KeyboardInterrupt:
+            logger.info("\nTerminated by keyboard... Shutting down")
+            shutdown_event.set()
+            
+    nmeareader_thread.join()
+    redis_publisher_thread.join()
+    mqtt_publisher_thread.join()
+
 
 if __name__ == "__main__":
-  set_logger(g_log_level, "py_snowdog")
-
-  send_que = queue.Queue(maxsize=1)
-  process_que = queue.Queue(maxsize=10)
-  shutdown_signal = Event()
-
-  stream = open('/dev/EG25.NMEA', 'rb')
-  nmr = NMEAReader(stream, nmeaonly=True)
-
-
-  produce_values_thread = Thread(target=read_values_from_device,
-                                  args=(nmr,
-                                        process_que,
-                                        shutdown_signal))
-  
-  process_values_thread = Thread(target=process_values,
-                                 args=(process_que,
-                                 send_que,
-                                 shutdown_signal))
-
-  send_values_thread = Thread(target=send_values,
-                                  args=(send_que,
-                                        shutdown_signal))
-  
-  logger.debug('Starting program ...')
-  
-  produce_values_thread.start()
-  process_values_thread.start()
-  send_values_thread.start()
-
-
-  while not shutdown_signal.is_set():
-    try:
-      sleep(1)
-    except KeyboardInterrupt:
-      logger.info("\nTerminated by keyboard... Shutting down")
-      shutdown_signal.set()
-
-  produce_values_thread.join()
-  process_values_thread.join()
-  send_values_thread.join()
+    main()
