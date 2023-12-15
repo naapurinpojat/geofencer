@@ -1,5 +1,4 @@
-from pynmeagps import NMEAReader 
-import asyncio
+from pynmeagps import NMEAReader
 import json
 import paho.mqtt.client as pahomqtt
 import redis
@@ -21,6 +20,7 @@ g_date = None
 
 MS_10 = 0.01
 MS_100 = 0.1
+MS_1000 = 1
 
 class MQTTClient:
     def __init__(self, broker_address, broker_port, client_id, username=None, password=None, ssl_file=None):
@@ -29,6 +29,7 @@ class MQTTClient:
         self.broker_port = broker_port
         self.client_id = client_id
         self.context = None
+        self.connection_retries = 0
 
         self.client = pahomqtt.Client(self.client_id, protocol=pahomqtt.MQTTv5)
 
@@ -41,32 +42,37 @@ class MQTTClient:
             self.client.username_pw_set(username, password)
 
         self.client.on_connect = self.on_connect
-        #self.client.on_disconnect = self.on_disconnect
+        self.client.on_disconnect = self.on_disconnect
 
-    def on_connect(self, client, userdata, flags, rc):
+    def on_connect(self, client, userdata, flags, rc, properties):
         self.logger.info(f'Connected to MQTT broker {self.broker_address}:{self.broker_port}')
+        self.connection_retries = 0
         
-    def on_disconnect(self, client, userdata, rc):
-        self.logger.warning('Disconnected from MQTT broker')
+    def on_disconnect(self, client, userdata, rc, properties):
+        self.logger.warning(f'Disconnected from MQTT broker ({rc}) {properties}')
 
     def keep_connected(self):
         if not self.client.is_connected():
-            try:
-                self.client.reconnect()
-            except Exception as e:
-                self.logger.warning(f'Failed to reconnect: {e}')
-                return False
-        return True
+            self.connection_retries += 1
+            self.client.reconnect()
 
     def is_connected(self):
-        return self.client.is_connected
+        return self.client.is_connected()
 
     def connect(self):
         self.client.connect(self.broker_address, self.broker_port)
+        self.client.loop_start()
+
+    def disconnect(self):
+        self.client.disconnect()
+        self.client.loop_start()
 
     def publish(self, topic, data):
-        self.client.publish(topic, data)
+        return self.client.publish(topic, data)
 
+    def get_connection_retries(self):
+        return self.connection_retries
+    
 class RedisClient:
     def __init__(self, host, port, topic, consumer_group, consumer_name):
         self.host = host
@@ -110,7 +116,6 @@ class MQTTPublisher(Thread):
         self.topic = topic
         self.shutdown_event = shutdown_event
         self.redis_client = redis_client
-
 
     def run(self): 
         def format_iot_ticket(data):
