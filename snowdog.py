@@ -5,7 +5,7 @@ import redis
 from time import sleep
 import ssl
 import logging
-from threading import Thread, Event, Lock
+from threading import Thread, Event
 import queue
 import datetime
 
@@ -152,8 +152,23 @@ class MQTTPublisher(Thread):
 
         self.client.connect()
 
+        # wait a while to get client connected
+        retries = 0
+        while not self.client.is_connected():
+            connection_check_delta = g_time - last_connection_check
+            if connection_check_delta.total_seconds() >= 1:
+                retries += 1
+
+                if retries > 10:
+                    logger.critical("Couldn't connect MQTT broker, shutting down")
+                    self.shutdown_event.set()
+                    break
+
+            sleep(MS_100)
+
         while not self.shutdown_event.is_set():
             if self.client.is_connected():
+                last_connection_check = g_time
                 messages = self.redis_client.read_messages()
 
                 ts_buffer = []
@@ -166,22 +181,23 @@ class MQTTPublisher(Thread):
                 if len(ts_buffer) > 0:
                     ts_json = json.dumps({'t_set': ts_buffer}, ensure_ascii=False)
 
-                    try:
-                        self.client.publish(self.topic, ts_json)
-                    except Exception as e:
-                        logger.critical(f"Couldn't send data \n {e} \n")
+                    mqtt_message_info = self.client.publish(self.topic, ts_json)
+                    if not mqtt_message_info.is_published():
+                        logger.debug(f"Data not published {mqtt_message_info.rc}")
 
             else:
-                logger.critical("MQTT client not connected")
+                connection_check_delta = g_time - last_connection_check
+                if connection_check_delta.total_seconds() >= 10:
+                    last_connection_check = g_time
+                    logger.critical("MQTT client not connected, trying to reconnect")
 
-                if not self.client.keep_connected():
-                    self.shutdown_event.set()
-                else:
-                    logger.info("Reconnected succesfully")
+                    if self.client.get_connection_retries() < 10:
+                        self.client.keep_connected()
+                    else:
+                        self.shutdown_event.set()
 
-            sleep(MS_100)
+            sleep(MS_10)
         logger.info("MQTTPublisher shutting down")
-
 
 class NMEAStreamReader(Thread):
     def __init__(self, path: str, data_que: queue.Queue, shutdown_event: Event):
