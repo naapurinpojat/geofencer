@@ -13,10 +13,10 @@
             position: absolute;
             top: 10px;
             left: 10px;
-            background-color: rgb(204, 9, 9);
+            background-color: rgb(187, 187, 187);
             padding: 5px;
             font-weight: bold;
-            border: 1px solid #cf0606;
+            border: 1px solid #353535;
         }
         .text-label_infence {
             position: absolute;
@@ -55,9 +55,10 @@
     for (var i = 0; i < geojsonFeature.features.length; i++) {
             //console.log(trailfences.features[i]);
             //console.log(geojsonFeature.features[i].properties.name);
-            geojsonFeature.features[i].properties.fill = "red";
-            geojsonFeature.features[i].properties.fillColor = "#008DD2";
-            geojsonFeature.features[i].properties.color = "#FF8DD2" ;
+            var defaultColor = "rgb(73, 73, 73)";
+            geojsonFeature.features[i].properties.fill = defaultColor;
+            geojsonFeature.features[i].properties.fillColor = defaultColor;
+            geojsonFeature.features[i].properties.color = defaultColor;
             geojsonFeature.features[i].properties.tooltipContent = "";
             geojsonFeature.features[i].properties.fillOpacity = 0.41;
             geojsonFeature.features[i].properties.weight = 1;
@@ -89,15 +90,70 @@
     console.log(geojsonobjects);
 
     
+    function calculateColor(timestamp) {
+        // Calculate the time difference in milliseconds
+        const currentTime = new Date().getTime();
+        //console.log(new Date().getTime());
+        const timeDifference = currentTime - timestamp;
+        console.log(timeDifference);
+        // Maximum time difference for the transition (5 hours in milliseconds)
+        const maxTransitionTime = 5 * 60 * 60 * 1000;
+
+        // Maximum time for a full transition to red (24 hours in milliseconds)
+        const maxTimeForFullRed = 24 * 60 * 60 * 1000;
+
+        // Calculate the color value between red and green based on time
+        let colorValue = Math.min(1, timeDifference / maxTransitionTime);
+        console.log(colorValue);
+
+        // If the timestamp is older than 5 hours, turn fully into red after 24 hours
+        if (timeDifference > maxTimeForFullRed) {
+            colorValue = 1;
+            console.log("full red");
+        }
+
+        // Calculate the RGB values based on the colorValue
+        const green = Math.round(255 * (1 - colorValue));
+        const red = Math.round(255 * colorValue);
+        const blue = 0; // Blue component is set to 0
+
+        // Return the color value as an RGB string
+        return `rgb(${red}, ${green}, ${blue})`;
+    }
+
+    // Example usage:
+    //const timestamp = new Date().getTime() - 6 * 60 * 60 * 1000; // 6 hours ago
+    //const color = calculateColor(timestamp);
+    //console.log(color);
+
+
+
 
     function checkColors() {
 
         axios.get('/snowdog/api.php?geojson=1&apikey=1234')
         .then(response => {
             // Handle the JSON data
-            geojsonobjects['Kertunlaakso'].setStyle({fillColor: 'red'});
-            console.log("Two seconds have passed!");
-            console.log(response.data);
+            //geojsonobjects['Kertunlaakso'].setStyle({fillColor: 'red'});
+            //console.log("Two seconds have passed!");
+            //console.log(response.data);
+            for (var i = 0; i < response.data.length; i++) {
+                console.log(response.data[i].in_area);
+                const dateObject = new Date(response.data[i].latest_ts);
+                console.log(new Date(response.data[i].latest_ts));
+                console.log(new Date());
+                //const timestamp = new Date().getTime() - 6 * 60 * 60 * 1000; // 6 hours ago
+                const color = calculateColor(dateObject.getTime());
+                console.log(color);
+                //console.log(timestamp);
+                //console.log(dateObject.getTime());
+                try {
+                    geojsonobjects[response.data[i].in_area].setStyle({fillColor: color});
+                } catch (error) {
+                    //console.log(error);
+                }
+                //geojsonobjects[response.data[i].in_area].setStyle({fillColor: 'green'});
+            }
             //globalData = response.data;
         })
         .catch(error => {
