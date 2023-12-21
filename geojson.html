@@ -140,7 +140,9 @@
                 const color = calculateColor(dateObject.getTime());
 
                 try {
+                    var updatestring = "Viimeksi käyty:<br>"+response.data[i].latest_ts;
                     geojsonobjects.polygons[response.data[i].in_area].setStyle({fillColor: color});
+                    geojsonobjects.polygons[response.data[i].in_area].bindPopup(updatestring);
 
                     var textLayer = L.divIcon({
                         className: calculateColorForMarker(dateObject.getTime()),
@@ -148,6 +150,7 @@
                     });
 
                     geojsonobjects.markers[response.data[i].in_area].setIcon(textLayer);
+                    geojsonobjects.markers[response.data[i].in_area].bindPopup(updatestring);
 
 
                 } catch (error) {
