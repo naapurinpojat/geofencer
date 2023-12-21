@@ -1,3 +1,4 @@
+import requests
 from pynmeagps import NMEAReader
 import json
 import paho.mqtt.client as pahomqtt
@@ -8,6 +9,7 @@ import logging
 from threading import Thread, Event
 import queue
 import datetime
+from math import radians, sin, cos, sqrt, atan2
 
 import secrets
 
@@ -17,6 +19,8 @@ logger.addHandler(logging.StreamHandler())
 
 g_time = None
 g_date = None
+
+g_last_known_pos = {'lat': 0, 'lon': 0, 'alt': 0, 'speed': 0, 'ts': None}
 
 MS_10 = 0.01
 MS_100 = 0.1
@@ -90,6 +94,21 @@ class RedisClient:
             pass
 
         logger.debug("Redis client initialised")
+        start_time = g_time
+        while True:
+            time_diff = g_time - start_time
+            info = self.client.info()
+            if info.get('loading', 1) == 1:
+                sleep(MS_1000)
+            else:
+                break
+
+            if time_diff.total_seconds() >= 60:
+                logger.critical("Couldn't establish connection to redis")
+                self.shutdown_event.set()
+                break         
+
+        logger.debug("Redis loaded")
 
     def read_messages(self, initial=False):
         count = 1
@@ -181,9 +200,12 @@ class MQTTPublisher(Thread):
                 if len(ts_buffer) > 0:
                     ts_json = json.dumps({'t_set': ts_buffer}, ensure_ascii=False)
 
-                    mqtt_message_info = self.client.publish(self.topic, ts_json)
-                    if not mqtt_message_info.is_published():
-                        logger.debug(f"Data not published {mqtt_message_info.rc}")
+                    try:
+                        mqtt_message_info = self.client.publish(self.topic, ts_json)
+                        if not mqtt_message_info.is_published():
+                            logger.debug(f"Data not published {mqtt_message_info.rc}")
+                    except RuntimeError as rterr:
+                        logger.critical(rterr)
 
             else:
                 connection_check_delta = g_time - last_connection_check
@@ -241,19 +263,29 @@ class RedisPublisher(Thread):
                 ts_raw = f"{g_date} {raw_ts}"
                 return f"{datetime.datetime.strptime(ts_raw, '%Y-%m-%d %H:%M:%S').isoformat()}.000Z"
             
+            global g_last_known_pos
             data = {}
+
             try:
                 if raw_data.identity == 'GPVTG':
                     data['ts'] = format_ts(raw_data.time)
                     data['identity'] = raw_data.identity
                     data['speed'] = raw_data.sogk
 
+                    g_last_known_pos['speed'] = data['speed']
+
                 if raw_data.identity == 'GPGGA':
                     data['ts'] = format_ts(raw_data.time)
                     data['identity'] = raw_data.identity
                     data['lat'] = raw_data.lat
                     data['lon'] = raw_data.lon
-                    data['alt'] = raw_data.alt 
+                    data['alt'] = raw_data.alt
+
+                    g_last_known_pos['lat'] = round(data['lat'], 6)
+                    g_last_known_pos['lon'] = round(data['lon'], 6)
+                    g_last_known_pos['alt'] = data['alt']
+
+                g_last_known_pos['ts'] = data['ts']
             except Exception as e:
                 data = None
                 logger.debug(e)
@@ -272,6 +304,113 @@ class RedisPublisher(Thread):
             sleep(MS_100)
         logger.info("RedisPublisher shutting down")
 
+class RestPublisher(Thread):
+    def __init__(self, api_url, api_key, shutdown_event):
+        super().__init__()
+        self.api_url = api_url
+        self.api_key = api_key
+        self.shutdown_event = shutdown_event
+        self.fences = None
+        self.areas = {}
+        self.last_sent_pos = None
+        self.last_sent_pos_ts = None
+
+        with open("areas.json") as f:
+            self.fences = json.load(f)
+
+        for i in self.fences.get("features"):
+            self.areas[i.get("properties").get("name")] = i.get("geometry").get('coordinates')[0]
+
+    def run(self):
+        def haversine_distance_meters(point1, point2):
+            """
+            Calculate the haversine distance between two points in meters.
+
+            Parameters:
+            - point1, point2: Tuple of (latitude, longitude) for each point.
+
+            Returns:
+            Distance in meters.
+            """
+            # Radius of the Earth in meters
+            R = 6371000.0
+
+            # Convert latitude and longitude from degrees to radians
+            lat1, lon1 = map(radians, point1)
+            lat2, lon2 = map(radians, point2)
+
+            # Calculate the differences in coordinates
+            dlat = lat2 - lat1
+            dlon = lon2 - lon1
+
+            # Haversine formula
+            a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
+            c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+            # Distance in meters
+            distance = R * c
+
+            return distance
+        
+        while not self.shutdown_event.is_set():
+
+            data = g_last_known_pos.copy()
+            distance_between = None
+            if self.last_sent_pos:
+                distance_between = haversine_distance_meters((data.get("lat"), data.get("lon")),(self.last_sent_pos.get("lat"), self.last_sent_pos.get("lon")))
+                time_diff = g_time - self.last_sent_pos_ts
+
+            if distance_between == None or distance_between > 5 or time_diff.total_seconds() >= 3 * 60:
+                try:
+                    #data = g_last_known_pos
+                    data['api_key'] = self.api_key
+                    data['in_area'] = ""
+                    in_area_data = self.in_area(data)
+                    if in_area_data:
+                        data['in_area'] = in_area_data
+                    logger.debug(data)
+                    response = requests.post(self.api_url, data=json.dumps(data))
+
+                    if response.status_code == 200:
+                        self.last_sent_pos = data
+                        self.last_sent_pos_ts = g_time
+
+                    logger.debug(f"API Response: {response.status_code}")
+                    
+                except Exception as e:
+                    logger.warning(f"Error connecting to API: {e}")
+            sleep(10 * MS_1000)
+
+    def in_area(self, point):
+        def point_in_polygon(x, y, polygon):
+            """
+            Check if a point (x, y) is inside a polygon.
+
+            Parameters:
+            - x, y: Coordinates of the point.
+            - polygon: List of tuples representing the vertices of the polygon.
+
+            Returns:
+            True if the point is inside the polygon, False otherwise.
+            """
+            n = len(polygon)
+            inside = False
+
+            # Ray casting algorithm
+            for i in range(n):
+                x1, y1 = polygon[i]
+                x2, y2 = polygon[(i + 1) % n]
+
+                if ((y1 <= y < y2) or (y2 <= y < y1)) and \
+                (x > (x2 - x1) * (y - y1) / (y2 - y1) + x1):
+                    inside = not inside
+
+            return inside
+        for k, v in self.areas.items():
+            if point_in_polygon(point.get('lon'), point.get('lat'), v):
+                return k
+
+        return None
 
 def main():
     global g_time
@@ -284,7 +423,7 @@ def main():
     redis_consumer_group = "redis_iot_group"
     redis_topic = "snowdog:location"
 
-    mqtt_client_name = "py_snowdog"
+    mqtt_client_name = None
     mqtt_topic = f"telemetry/{secrets.MY_TENANT}/{secrets.MY_DEVICE}"
 
     io_queue = queue.Queue(maxsize=100)
@@ -295,10 +434,12 @@ def main():
     nmeareader_thread = NMEAStreamReader('/dev/EG25.NMEA', io_queue, shutdown_event)
     redis_publisher_thread = RedisPublisher(redis_client, io_queue, shutdown_event)
     mqtt_publisher_thread = MQTTPublisher(mqtt_client, mqtt_topic, redis_client, shutdown_event)
+    rest_publisher_thread = RestPublisher(secrets.WEB_API, secrets.API_KEY, shutdown_event)
 
     nmeareader_thread.start()
     redis_publisher_thread.start()
     mqtt_publisher_thread.start()
+    rest_publisher_thread.start()
 
     while not shutdown_event.is_set():
         try:
@@ -313,6 +454,7 @@ def main():
     nmeareader_thread.join()
     redis_publisher_thread.join()
     mqtt_publisher_thread.join()
+    rest_publisher_thread.join()
 
     mqtt_client.disconnect()
     redis_client.close()
