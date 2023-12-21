@@ -38,15 +38,117 @@ $data = array(
 // Set the content type to JSON
 
 
+
+$apikey_string = '0028b076-ca97-44c5-9603-bdfc38e2718e';
 // Check if it's a GET request
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['apikey']) && $_GET['apikey'] === '0028b076-ca97-44c5-9603-bdfc38e2718e') {
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['apikey']) && ($_GET['apikey'] === $apikey_string || $_GET['api_key'] === $apikey_string) && !isset($_GET['geojson'])) {
     header('Content-Type: image/svg+xml');
 
     // Generate and echo the SVG image
     echo generateDogSvg(json_encode($_GET));
     // Encode the data as JSON and output it
+ 
     //echo json_encode($_GET);
-} else {
+}
+elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['apikey']) && isset($_GET['geojson'])) {
+
+    // Assuming you have a database connection
+    $servername = "localhost";
+    $username = "juhavdph_snowdog";
+    $password = "snowdogSalasana";
+    $dbname = "juhavdph_snowdog";
+
+    $conn = new mysqli($servername, $username, $password, $dbname);
+
+    // Check connection
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
+    }
+
+    // Fetch data from your_table_name
+    $sql = 'SELECT DISTINCT in_area, MAX(ts) AS latest_ts FROM location_history GROUP BY in_area;';
+    $result = $conn->query($sql);
+
+    if ($result->num_rows > 0) {
+
+        $json = [];
+        while ($row = $result->fetch_assoc()) {
+            array_push($json, array('in_area' => $row['in_area'], 'latest_ts' => $row['latest_ts']));
+        }
+
+    } else {
+        echo "{}";
+    }
+
+    // Close the connection
+    $conn->close();
+    echo json_encode($json);
+
+
+}
+elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $requestData = json_decode(file_get_contents("php://input"), true);
+
+    // Check if the request data is valid
+    if ($requestData !== null && ($requestData['api_key'] === $apikey_string || $requestData['apikey'] === $apikey_string)) {
+        // Merge request data with the existing data
+        //$data = array_merge($data, $requestData);
+        $lat = $requestData['lat'];
+        $lon = $requestData['lon'];
+        $alt = $requestData['alt'];
+        $speed = $requestData['speed'];
+        $ts = $requestData['ts'];
+        $in_area = $requestData['in_area'];
+
+        $servername = "localhost";
+        $username = "juhavdph_snowdog";
+        $password = "snowdogSalasana";
+        $dbname = "juhavdph_snowdog";
+
+        $conn = new mysqli($servername, $username, $password, $dbname);
+        if ($conn->connect_error) {
+            die("Connection failed: " . $conn->connect_error);
+        }
+        //$formattedTs = date('Y-m-d H:i:s', strtotime($ts));
+
+        $utcDateTime = new DateTime($ts, new DateTimeZone('UTC'));
+
+        // Set the Helsinki time zone for conversion
+        $helsinkiTimeZone = new DateTimeZone('Europe/Helsinki');
+        $utcDateTime->setTimezone($helsinkiTimeZone);
+        
+        // Format the local time
+        $formattedTs = $utcDateTime->format('Y-m-d H:i:s');
+
+
+        // Create INSERT statement
+        $lat = $conn->real_escape_string($lat);
+        $lon = $conn->real_escape_string($lon);
+        $alt = $conn->real_escape_string($alt);
+        $speed = $conn->real_escape_string($speed);
+        $ts = $formattedTs;//$conn->real_escape_string($ts);
+        $in_area = $conn->real_escape_string($in_area);
+        
+        // Create INSERT statement without prepare
+        $sql = "INSERT INTO location_history (lat, lon, alt, speed, ts, in_area) VALUES ($lat, $lon, $alt, $speed, '$ts', '$in_area')";
+        echo $sql;
+        
+        
+        // Execute the query
+        $conn->query($sql);
+        
+        // Close the connection
+        $conn->close();
+
+
+        echo json_encode(array('status' => 'Ok'));
+    } else {
+        // If the request data is not valid, return an error
+        http_response_code(400); // Bad Request
+        echo json_encode(array('status' => 'Invalid JSON data'));
+    }
+}
+else {
     //header('Content-Type: application/json');
     // If it's not a GET request, return an error
     header('Content-Type: image/svg+xml');
