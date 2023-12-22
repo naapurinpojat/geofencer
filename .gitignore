@@ -2,3 +2,5 @@
 temp/
 secrets.py
 *.pem
+gitversion.py
+dog.zip
