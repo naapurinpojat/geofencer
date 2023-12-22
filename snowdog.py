@@ -353,6 +353,10 @@ class RestPublisher(Thread):
 
             return distance
         
+        # Wait until first location is read 
+        while g_last_known_pos['lat'] == 0:
+            sleep(MS_1000)
+
         while not self.shutdown_event.is_set():
 
             data = g_last_known_pos.copy()
