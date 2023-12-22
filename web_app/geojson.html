@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0">
+    <title>OpenStreetMap with GeoJSON</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 1000px;
+        }
+        .text-label {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgb(187, 187, 187);
+            padding: 5px;
+            font-weight: normal;
+            border: 1px solid #353535;
+        }
+        .text-label_infence {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgb(0, 158, 21);
+            padding: 5px;
+            font-weight: normal;
+            border: 1px solid #008612;
+        }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+<script>
+    // Initialize the map
+    var map = L.map('map').setView([62.777826899671936,22.80509078349192], 12);
+    var globalData;
+    // read geojson file from a file
+    
+    var url = '/snowdog/map.geojson';
+    // Create a synchronous XMLHttpRequest object
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, false); // The third parameter (false) makes the request synchronous
+    xhr.send();
+
+    // Check if the request was successful (status code 200)
+    if (xhr.status === 200) {
+        // Log or do something with the response text
+        console.log(xhr.responseText);
+    } else {
+        // Handle errors
+        console.error('Error:', xhr.statusText);
+    }
+    
+    var geojsonFeature = JSON.parse(xhr.responseText);
+    var geojsonobjects = [];
+    geojsonobjects.polygons = [];
+    geojsonobjects.markers = [];
+
+    // Add OpenStreetMap tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Example GeoJSON data
+
+
+    for (var i = 0; i < geojsonFeature.features.length; i++) {
+            //console.log(trailfences.features[i]);
+            //console.log(geojsonFeature.features[i].properties.name);
+            var defaultColor = "rgb(73, 73, 73)";
+            geojsonFeature.features[i].properties.fill = defaultColor;
+            geojsonFeature.features[i].properties.fillColor = defaultColor;
+            geojsonFeature.features[i].properties.color = defaultColor;
+            geojsonFeature.features[i].properties.tooltipContent = "";
+            geojsonFeature.features[i].properties.fillOpacity = 0.41;
+            geojsonFeature.features[i].properties.weight = 1;
+
+        //console.log(geojsonFeature.features[i]);
+        var active = 'text-label';
+        //if (geojsonFeature.features[i].properties.name == "Kertunlaakso") {
+        //    var active = 'text-label_infence';
+        //}
+        var textLayer = L.divIcon({
+            className: active,
+            html: '<div>'+geojsonFeature.features[i].properties.name+'</div>'
+        });
+        geojsonobjects.markers[geojsonFeature.features[i].properties.name] = L.marker([geojsonFeature.features[i].geometry.coordinates[0][0][1], geojsonFeature.features[i].geometry.coordinates[0][0][0]], {icon: textLayer}).addTo(map);
+        //L.geoJSON(geojsonFeature.features[i]).addTo(map);
+
+        geojsonobjects.polygons[geojsonFeature.features[i].properties.name] = L.geoJSON(geojsonFeature.features[i], {
+        style: function (feature) {
+            return {
+                fillColor: feature.properties.fillColor, // Set the fill color to red, or use the specified fill color in the properties
+                weight: feature.properties.weight,
+                opacity: feature.properties.fillOpacity1,
+                color: feature.properties.color,
+                fillOpacity: feature.properties.fillOpacity
+            };
+        }
+        }).addTo(map);
+    }
+    //console.log(geojsonobjects);
+
+    
+    function calculateColor(timestamp) {
+        // Calculate the time difference in milliseconds
+        const currentTime = new Date().getTime();
+        const timeDifference = currentTime - timestamp;
+
+        // Maximum time for a full transition to red (24 * 3 (3 days) hours in milliseconds)
+        const maxTimeForFullRed = 24 * 3 * 60 * 60 * 1000;
+
+        // Calculate the color value between red and green based on time
+        let colorValue = Math.min(1, timeDifference / maxTimeForFullRed);
+
+        // Calculate the RGB values based on the colorValue
+        const green = Math.round(255 * (1 - colorValue));
+        const red = Math.round(255 * colorValue);
+        const blue = 0; // Blue component is set to 0
+
+        // Return the color value as an RGB string
+        return `rgb(${red}, ${green}, ${blue})`;
+    }
+
+    function calculateColorForMarker(timestamp) {
+        // Calculate the time difference in milliseconds
+        const currentTime = new Date().getTime();
+        const timeDifference = currentTime - timestamp;
+
+        // Maximum time for a full transition to red (24 * 3 (3 days) hours in milliseconds)
+        const maxTimeForFullRed =  30 * 1000;
+
+        if (timeDifference < maxTimeForFullRed) {
+            return "text-label_infence";
+        }
+        else {
+            return "text-label";
+        }
+
+    }
+
+
+
+    function checkColors() {
+        axios.get('/snowdog/api.php?geojson=1&apikey=1234')
+        .then(response => {
+            // Handle the JSON data
+            for (var i = 0; i < response.data.length; i++) {
+
+                const dateObject = new Date(response.data[i].latest_ts);
+                const color = calculateColor(dateObject.getTime());
+
+                try {
+                    var updatestring = "Viimeksi käyty:<br>"+response.data[i].latest_ts;
+                    geojsonobjects.polygons[response.data[i].in_area].setStyle({fillColor: color});
+                    geojsonobjects.polygons[response.data[i].in_area].bindPopup(updatestring);
+
+                    var textLayer = L.divIcon({
+                        className: calculateColorForMarker(dateObject.getTime()),
+                        html: '<div>'+response.data[i].in_area+'</div>'
+                    });
+
+                    geojsonobjects.markers[response.data[i].in_area].setIcon(textLayer);
+                    geojsonobjects.markers[response.data[i].in_area].bindPopup(updatestring);
+
+
+                } catch (error) {
+                    //console.log(error);
+                }
+            }
+        })
+        .catch(error => {
+            // Handle errors
+            console.error('Axios error:', error);
+        });
+        }
+
+        // Set a two-second timer
+    checkColors();
+    setInterval(checkColors, 10000);
+
+</script>
+
+</body>
+
+</html>
