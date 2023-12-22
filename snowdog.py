@@ -10,6 +10,7 @@ from threading import Thread, Event
 import queue
 import datetime
 from math import radians, sin, cos, sqrt, atan2
+import gitversion
 
 import secrets
 
@@ -419,6 +420,7 @@ def main():
     g_date = datetime.date.today()
     shutdown_event = Event()
 
+    logger.info(f"Starting Snowdog {gitversion.git_revision}")
     redis_consumer_name = "redis_iot"
     redis_consumer_group = "redis_iot_group"
     redis_topic = "snowdog:location"
