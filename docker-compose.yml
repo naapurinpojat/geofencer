@@ -1,0 +1,44 @@
+version: '3'
+
+services:
+  mysql:
+    image: mysql:5.7
+    container_name: mysql-container
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: juhavdph_snowdog
+      MYSQL_USER: juhavdph_snowdog
+      MYSQL_PASSWORD: snowdogSalasana
+    ports:
+      - "3306:3306"
+    networks:
+      - mynetwork
+
+  apache:
+    image: php:5.6-apache
+    container_name: apache-container
+    volumes:
+      - ./web_app:/var/www/html/snowdog
+    ports:
+      - "80:80"
+    networks:
+      - mynetwork
+    depends_on:
+      - mysql
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin-container
+    environment:
+      PMA_ARBITRARY: 1
+      MYSQL_ROOT_PASSWORD: your_mysql_root_password
+    ports:
+      - "8080:80"
+    networks:
+      - mynetwork
+    depends_on:
+      - mysql
+
+networks:
+  mynetwork:
+    driver: bridge
