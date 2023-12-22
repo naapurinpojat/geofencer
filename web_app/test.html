@@ -1,0 +1,48 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.23/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <title>Daisy UI Web Page</title>
+    <style>
+        #iframe-container {
+            width: 100%;
+            height: calc(100vh - 60px);
+            overflow: hidden;
+        }
+        #myIframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="navbar bg-base-100">
+        <div class="flex-1">
+          <a class="btn btn-ghost text-xl">Map test</a>
+        </div>
+        <div class="flex-none">
+          <button class="btn btn-square btn-ghost" onclick="loadPage('/snowdog/')"><i class="iconoir-map"></i></button>
+          <button class="btn btn-square btn-ghost" onclick="loadPage('/snowdog/dump.php')"><i class="iconoir-database"></i></button>
+          <button class="btn btn-square btn-ghost" onclick="loadPage('/snowdog/api.php?apikey=0028b076-ca97-44c5-9603-bdfc38e2718e&derp=dffo')"><i class="iconoir-qr-code"></i></button>
+        </div>
+      </div>
+    <div id="iframe-container">
+        <iframe id="myIframe" src="/snowdog/" frameborder="0"></iframe>
+    </div>
+
+    <script>
+        function loadPage(url) {
+            document.getElementById('myIframe').src = url;
+        }
+    </script>
+
+</body>
+</html>
