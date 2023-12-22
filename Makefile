@@ -3,10 +3,19 @@
 # Define variables
 REVISION_SCRIPT := getrevision.sh
 GIT_VERSION_PY := gitversion.py
+GIT_VERSION_PHP := web_app/gitversion.php
 PACKAGE_NAME := dog.zip
 
 # Define targets and rules
-all: $(GIT_VERSION_PY) $(PACKAGE_NAME)
+all: $(GIT_VERSION_PY) $(GIT_VERSION_PHP) $(PACKAGE_NAME)
+
+$(GIT_VERSION_PHP):
+	@echo "Generating git version information..."
+	@REVISION=$$(./$(REVISION_SCRIPT)); \
+	echo "<?php" > $(GIT_VERSION_PHP); \
+	echo "define('GIT_REVISION', '$$REVISION');" >> $(GIT_VERSION_PHP)
+	echo "?>" >> $(GIT_VERSION_PHP)
+	@echo "Git version information stored in $(GIT_VERSION_PHP)"
 
 # Run getrevision.sh and store output to a variable
 $(GIT_VERSION_PY):
@@ -24,7 +33,7 @@ $(PACKAGE_NAME): $(GIT_VERSION_PY)
 # Clean up intermediate files
 clean:
 	@echo "Cleaning up..."
-	@rm -f $(GIT_VERSION_PY) $(PACKAGE_NAME)
+	@rm -f $(GIT_VERSION_PY) $(PACKAGE_NAME) $(GIT_VERSION_PHP)
 	@echo "Cleanup complete"
 
 # PHONY targets to avoid conflicts with file names

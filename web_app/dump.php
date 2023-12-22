@@ -1,10 +1,6 @@
 <?php
-
-// Assuming you have a database connection
-$servername = "localhost";
-$username = "juhavdph_snowdog";
-$password = "snowdogSalasana";
-$dbname = "juhavdph_snowdog";
+include 'config.php';
+include 'gitversion.php';
 
 $conn = new mysqli($servername, $username, $password, $dbname);
 

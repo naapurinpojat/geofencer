@@ -1,5 +1,6 @@
 <?php
-
+include 'config.php';
+include 'gitversion.php';
 $debug = 1;
 // Create a simple SVG image of a dog
 function generateDogSvg($text) {
@@ -38,7 +39,6 @@ $data = array(
 // Set the content type to JSON
 
 
-
 $apikey_string = '0028b076-ca97-44c5-9603-bdfc38e2718e';
 // Check if it's a GET request
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['apikey']) && ($_GET['apikey'] === $apikey_string || $_GET['api_key'] === $apikey_string) && !isset($_GET['geojson'])) {
@@ -50,14 +50,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['apikey']) && ($_GET['ap
  
     //echo json_encode($_GET);
 }
+elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['apikey']) && isset($_GET['version'])) {
+    header('Content-Type: application/json');
+    echo json_encode(array('version' => GIT_REVISION));
+}
 elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['apikey']) && isset($_GET['geojson'])) {
 
     // Assuming you have a database connection
-    $servername = "localhost";
-    $username = "juhavdph_snowdog";
-    $password = "snowdogSalasana";
-    $dbname = "juhavdph_snowdog";
-
     $conn = new mysqli($servername, $username, $password, $dbname);
 
     // Check connection
@@ -86,6 +85,90 @@ elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['apikey']) && isset($
 
 
 }
+elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['apikey']) && isset($_GET['lastonline'])) {
+
+    // Assuming you have a database connection
+    $conn = new mysqli($servername, $username, $password, $dbname);
+
+    // Check connection
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
+    }
+
+    // Fetch data from your_table_name
+    $sql = 'SELECT max(ts) as ts FROM `location_history`';
+    $result = $conn->query($sql);
+
+    if ($result->num_rows > 0) {
+
+        $json = [];
+        while ($row = $result->fetch_assoc()) {
+            $json = array('online' => $row['ts']);
+        }
+
+    } else {
+        echo "{}";
+    }
+
+    // Close the connection
+    $conn->close();
+    echo json_encode($json);
+
+
+}
+/*
+
+*/
+elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['apikey']) && isset($_GET['backdoor'])) {
+
+    // Assuming you have a database connection
+
+
+    $conn = new mysqli($servername, $username, $password, $dbname);
+
+    // Check connection
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
+    }
+
+
+    $jsonString = '{
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+              "coordinates": [
+              ],
+              "type": "LineString"
+            }
+          }
+        ]
+      }';
+    $phpObject = json_decode($jsonString);
+    print_r($phpObject);
+
+    // Fetch data from your_table_name
+    $sql = "SELECT * FROM location_history order by id";
+    $result = $conn->query($sql);
+
+    if ($result->num_rows > 0) {
+
+        while ($row = $result->fetch_assoc()) {
+            array_push($phpObject->features[0]->geometry->coordinates, array(floatval($row['lon']), floatval($row['lat'])));
+        }
+
+    } else {
+        echo "{}";
+    }
+
+    // Close the connection
+    $conn->close();
+    echo json_encode($phpObject);
+
+
+}
 elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $requestData = json_decode(file_get_contents("php://input"), true);
 
@@ -99,11 +182,6 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $speed = $requestData['speed'];
         $ts = $requestData['ts'];
         $in_area = $requestData['in_area'];
-
-        $servername = "localhost";
-        $username = "juhavdph_snowdog";
-        $password = "snowdogSalasana";
-        $dbname = "juhavdph_snowdog";
 
         $conn = new mysqli($servername, $username, $password, $dbname);
         if ($conn->connect_error) {

@@ -4,3 +4,4 @@ secrets.py
 *.pem
 gitversion.py
 dog.zip
+web_app/gitversion.php

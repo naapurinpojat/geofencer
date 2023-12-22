@@ -1,24 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>OpenStreetMap with GeoJSON</title>
+    <title>Snowdog Tracker 1.0</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <link
-    rel="stylesheet"
-    href="https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css"
-    />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css" />
 
     <style>
-body {
-    padding: 0;
-    margin: 0;
-}
-html, body, #map {
-    height: 100%;
-    width: 100vw;
-}
+        body {
+            padding: 0;
+            margin: 0;
+        }
+
+        html,
+        body,
+        #map {
+            height: 100%;
+            width: 100vw;
+        }
+
         .text-label {
             position: absolute;
             top: 10px;
@@ -29,6 +31,7 @@ html, body, #map {
             border: 1px solid #8a8a8a;
             border-radius: 50%;
         }
+
         .text-label_infence {
             position: absolute;
             top: 10px;
@@ -39,6 +42,7 @@ html, body, #map {
             border: 1px solid #008612;
             border-radius: 50%;
         }
+
         .overlay-text {
             position: absolute;
             top: 5%;
@@ -50,6 +54,7 @@ html, body, #map {
             text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.8);
             z-index: 1000;
         }
+
         .overlay-text-bottom {
             position: absolute;
             top: 10%;
@@ -62,187 +67,211 @@ html, body, #map {
             z-index: 1000;
             font-family: 'Tahoma', 'sans-serif';
             font-size: 24px;
-
         }
-
     </style>
 </head>
+
 <body>
 
-<div id="map"></div>
-<!--<div class="overlay-text">
-    <svg
-    width="18.853447mm"
-    height="9.397726mm"
-    viewBox="0 0 36.853447 17.397726"
-    version="1.1"
-    id="svg1"
-    xml:space="preserve"
-    xmlns="http://www.w3.org/2000/svg"
-    xmlns:svg="http://www.w3.org/2000/svg"><defs
-      id="defs1" /><g
-      id="layer1"
-      transform="translate(-105.96785,-126.67566)"><path
-        style="fill:#000000"
-        d="m 114.68607,143.60852 c -0.44527,-0.36055 -0.55637,-0.65184 -0.43424,-1.13848 0.20607,-0.82102 1.7347,-2.36419 3.40132,-3.43365 0.70226,-0.45064 1.27683,-0.84584 1.27683,-0.87822 0,-0.0324 -0.3319,-0.0102 -0.73754,0.0494 -0.46639,0.0684 -0.97033,-0.0803 -1.37072,-0.40447 l -0.63317,-0.51271 -1.20898,0.92634 c -2.39743,1.83696 -3.47914,1.91688 -6.69507,0.49465 -2.42118,-1.07076 -2.73508,-1.76987 -1.89788,-4.22692 0.86958,-2.55208 4.33276,-5.27342 7.20046,-5.65806 0.90344,-0.12117 1.17507,-0.0377 1.75091,0.53815 0.88505,0.88505 0.85939,1.30271 -0.13122,2.13625 l -0.81279,0.68392 -0.90177,-0.68781 -0.90177,-0.68781 -0.86513,0.5007 c -1.68785,0.97686 -3.33093,4.27809 -2.66379,5.352 0.45796,0.73718 1.98263,1.61046 2.81172,1.61046 0.56789,0 1.36864,-0.43363 2.739,-1.48324 1.06507,-0.81577 1.93649,-1.58554 1.93649,-1.71058 0,-0.28047 1.57727,-2.10009 1.81334,-2.09197 0.0941,0.003 0.44042,0.21324 0.76968,0.46668 l 0.59865,0.46079 -0.5325,1.04448 c -0.29288,0.57446 -0.53251,1.32114 -0.53251,1.6593 0,1.00122 0.84452,0.32753 2.26172,-1.80423 1.34664,-2.02564 1.80809,-2.3744 2.3821,-1.80039 0.31622,0.31622 0.27665,0.56978 -0.27465,1.75969 -0.60923,1.31497 -0.61536,1.37485 -0.1132,1.1061 0.292,-0.15627 0.88819,-0.8648 1.32488,-1.5745 0.99193,-1.61209 2.87208,-2.9113 4.21309,-2.9113 1.67191,0 2.43439,1.53 1.31856,2.64583 -0.66686,0.66687 -0.96602,0.66687 -1.32291,0 -0.36938,-0.69019 -0.8398,-0.66947 -1.50196,0.0662 -0.71233,0.79136 -0.91398,1.42331 -0.71155,2.22987 0.20005,0.79704 0.7343,0.74786 3.05077,-0.28085 1.32567,-0.58871 1.59541,-0.84696 2.33598,-2.23641 1.11279,-2.0878 4.01376,-5.68423 5.15297,-6.3883 0.50188,-0.31018 1.31326,-0.62899 1.80307,-0.70847 0.76399,-0.12398 0.99117,-0.025 1.59835,0.69663 0.9125,1.08444 0.89712,2.05189 -0.0531,3.34054 -1.31321,1.7809 -4.32701,4.18861 -6.44899,5.15208 -0.83341,0.37841 -0.86567,0.48464 -0.35801,1.17891 0.36159,0.4945 0.3982,0.49204 1.69134,-0.11363 0.86541,-0.40533 1.59937,-1.01294 2.12583,-1.75982 1.05507,-1.49685 2.02617,-2.14899 2.55119,-1.71327 0.75638,0.62775 0.73009,1.2868 -0.0925,2.31773 -0.4375,0.54833 -0.92121,1.33245 -1.07491,1.74248 -0.26245,0.70015 -0.24321,0.73428 0.31612,0.56081 0.32757,-0.10159 1.26891,-0.52239 2.09187,-0.93511 1.26823,-0.63603 1.54361,-0.69339 1.80676,-0.37631 0.25298,0.30482 -0.0241,0.6209 -1.49629,1.70695 -2.25649,1.66463 -3.12897,1.70822 -4.74734,0.23715 -0.55246,-0.50218 -0.57117,-0.50143 -1.52438,0.061 -1.21205,0.71513 -1.84461,0.56834 -3.38187,-0.78481 l -1.18814,-1.04585 -1.08315,0.61524 c -2.03622,1.1566 -2.81402,1.29461 -3.97063,0.70455 -0.56535,-0.28842 -1.17734,-0.70446 -1.35999,-0.92453 -0.29153,-0.35127 -0.45377,-0.3135 -1.32855,0.30931 -0.54805,0.3902 -1.43021,1.44272 -1.96034,2.33895 -1.31342,2.22044 -2.24364,3.27426 -3.26809,3.7023 -1.17662,0.49162 -2.03116,0.45311 -2.7434,-0.12363 z m 3.31898,-1.96287 c 0.53261,-0.61846 1.09023,-1.34847 1.23915,-1.62225 0.41583,-0.76447 -1.4482,0.72928 -2.29425,1.83851 -1.03643,1.35883 -0.14379,1.17587 1.0551,-0.21626 z m 17.89784,-8.66897 c 1.37245,-1.02981 4.07318,-4.17364 3.8108,-4.43603 -0.35112,-0.35112 -3.09852,2.11846 -4.86578,4.37375 -1.10399,1.40886 -0.76622,1.42879 1.05498,0.0623 z m 4.58549,-0.33031 c -0.63128,-0.54301 -0.68661,-0.70236 -0.41805,-1.20416 0.36801,-0.68763 0.75588,-0.72613 1.57005,-0.15587 0.42093,0.29483 0.57859,0.63386 0.52189,1.12222 -0.10702,0.92167 -0.76944,1.01579 -1.67389,0.23781 z"
-        id="path1" /></g></svg>
-   
-    </div>-->
+    <div id="map"></div>
     <div class="overlay-text-bottom">
-                Snowdog Tracker 1.0    
     </div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 
-<script>
-    // Initialize the map
-    var map = L.map('map').setView([62.7708962631589,22.79477884392867], 13);
-    var globalData;
-    // read geojson file from a file
-    
-    var url = '/snowdog/map.geojson';
-    // Create a synchronous XMLHttpRequest object
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', url, false); // The third parameter (false) makes the request synchronous
-    xhr.send();
+    <script>
+        // Initialize the map
+        var map = L.map('map').setView([62.7708962631589, 22.79477884392867], 13);
+        var globalData;
+        var geojsonFeature;
+        var geojsonobjects = [];
+        geojsonobjects.polygons = [];
+        geojsonobjects.markers = [];
 
-    // Check if the request was successful (status code 200)
-    if (xhr.status === 200) {
-        // Log or do something with the response text
-        console.log(xhr.responseText);
-    } else {
-        // Handle errors
-        console.error('Error:', xhr.statusText);
-    }
-    
-    var geojsonFeature = JSON.parse(xhr.responseText);
-    var geojsonobjects = [];
-    geojsonobjects.polygons = [];
-    geojsonobjects.markers = [];
+        var url = '/snowdog/map.geojson';
+        // Create a synchronous XMLHttpRequest object
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', url, false); // The third parameter (false) makes the request synchronous
+        xhr.send();
 
-    // Add OpenStreetMap tile layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors, SupremeSolution Experts'
-    }).addTo(map);
-
-    // Example GeoJSON data
-
-
-    for (var i = 0; i < geojsonFeature.features.length; i++) {
-        var defaultColor = "rgb(73, 73, 73)";
-        geojsonFeature.features[i].properties.fill = defaultColor;
-        geojsonFeature.features[i].properties.fillColor = defaultColor;
-        geojsonFeature.features[i].properties.color = defaultColor;
-        geojsonFeature.features[i].properties.tooltipContent = "";
-        geojsonFeature.features[i].properties.fillOpacity = 0.41;
-        geojsonFeature.features[i].properties.weight = 1;
-
-        var active = 'text-label';
-        var textLayer = L.divIcon({
-            className: active,
-            html: '<div><i class="iconoir-antenna-signal"><em>'+geojsonFeature.features[i].properties.name+'</em></div>'
-        });
-
-        geojsonobjects.polygons[geojsonFeature.features[i].properties.name] = L.geoJSON(geojsonFeature.features[i], {
-        style: function (feature) {
-            return {
-                fillColor: feature.properties.fillColor, // Set the fill color to red, or use the specified fill color in the properties
-                weight: feature.properties.weight,
-                opacity: feature.properties.fillOpacity1,
-                color: feature.properties.color,
-                fillOpacity: feature.properties.fillOpacity
-            };
+        // Check if the request was successful (status code 200)
+        if (xhr.status === 200) {
+            // Log or do something with the response text
+            //console.log(xhr.responseText);
+            geojsonFeature = JSON.parse(xhr.responseText);
+        } else {
+            // Handle errors
+            console.error('Error:', xhr.statusText);
         }
+
+        var url = '/snowdog/api.php?version=1&apikey=1234';
+        // Create a synchronous XMLHttpRequest object
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', url, false); // The third parameter (false) makes the request synchronous
+        xhr.send();
+
+        // Check if the request was successful (status code 200)
+        if (xhr.status === 200) {
+            // Log or do something with the response text
+            console.log(xhr.responseText);
+            appversion = JSON.parse(xhr.responseText);
+        } else {
+            // Handle errors
+            console.error('Error:', xhr.statusText);
+        }
+
+        // Add OpenStreetMap tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors, SupremeSolution Experts,'+appversion.version,
         }).addTo(map);
 
-        var polygonCenter = geojsonobjects.polygons[geojsonFeature.features[i].properties.name].getBounds().getCenter();
-
-        // Create a marker at the center of the polygon
-        geojsonobjects.markers[geojsonFeature.features[i].properties.name] = L.marker(polygonCenter, {icon: textLayer}).addTo(map);
-
-    }
-    //console.log(geojsonobjects);
-
-    
-    function calculateColor(timestamp) {
-        // Calculate the time difference in milliseconds
-        const currentTime = new Date().getTime();
-        const timeDifference = currentTime - timestamp;
-
-        // Maximum time for a full transition to red (24 * 3 (3 days) hours in milliseconds)
-        const maxTimeForFullRed = 24 * 3 * 60 * 60 * 1000;
-
-        // Calculate the color value between red and green based on time
-        let colorValue = Math.min(1, timeDifference / maxTimeForFullRed);
-
-        // Calculate the RGB values based on the colorValue
-        const green = Math.round(255 * (1 - colorValue));
-        const red = Math.round(255 * colorValue);
-        const blue = 0; // Blue component is set to 0
-
-        // Return the color value as an RGB string
-        return `rgb(${red}, ${green}, ${blue})`;
-    }
-
-    function calculateColorForMarker(timestamp) {
-        // Calculate the time difference in milliseconds
-        const currentTime = new Date().getTime();
-        const timeDifference = currentTime - timestamp;
-
-        // Maximum time for a full transition to red 3 minutes in milliseconds)
-        const maxTimeForFullRed =  4 * 60 * 1000;
-
-        if (timeDifference < maxTimeForFullRed) {
-            return "text-label_infence";
-        }
-        else {
-            return "text-label";
-        }
-
-    }
+        // Example GeoJSON data
 
 
+        for (var i = 0; i < geojsonFeature.features.length; i++) {
+            var defaultColor = "rgb(73, 73, 73)";
+            geojsonFeature.features[i].properties.fill = defaultColor;
+            geojsonFeature.features[i].properties.fillColor = defaultColor;
+            geojsonFeature.features[i].properties.color = defaultColor;
+            geojsonFeature.features[i].properties.tooltipContent = "";
+            geojsonFeature.features[i].properties.fillOpacity = 0.41;
+            geojsonFeature.features[i].properties.weight = 1;
 
-    function checkColors() {
-        axios.get('/snowdog/api.php?geojson=1&apikey=1234')
-        .then(response => {
-            // Handle the JSON data
-            for (var i = 0; i < response.data.length; i++) {
+            var active = 'text-label';
+            var textLayer = L.divIcon({
+                className: active,
+                html: '<div><i class="iconoir-antenna-signal"><em>' + geojsonFeature.features[i].properties.name + '</em></div>'
+            });
 
-                const dateObject = new Date(response.data[i].latest_ts);
-                const color = calculateColor(dateObject.getTime());
-
-                try {
-                    var updatestring = "Viimeksi käyty:<br>"+response.data[i].latest_ts;
-                    geojsonobjects.polygons[response.data[i].in_area].setStyle({fillColor: color});
-                    geojsonobjects.polygons[response.data[i].in_area].bindPopup(updatestring);
-
-                    var textLayer = L.divIcon({
-                        className: calculateColorForMarker(dateObject.getTime()),
-                        html: '<div><i class="iconoir-antenna-signal"></i><em>'+response.data[i].in_area+'</em></div>'
-                    });
-
-                    geojsonobjects.markers[response.data[i].in_area].setIcon(textLayer);
-                    geojsonobjects.markers[response.data[i].in_area].bindPopup(updatestring);
-
-
-                } catch (error) {
-                    //console.log(error);
+            geojsonobjects.polygons[geojsonFeature.features[i].properties.name] = L.geoJSON(geojsonFeature.features[i], {
+                style: function (feature) {
+                    return {
+                        fillColor: feature.properties.fillColor, // Set the fill color to red, or use the specified fill color in the properties
+                        weight: feature.properties.weight,
+                        opacity: feature.properties.fillOpacity1,
+                        color: feature.properties.color,
+                        fillOpacity: feature.properties.fillOpacity
+                    };
                 }
-            }
-        })
-        .catch(error => {
-            // Handle errors
-            console.error('Axios error:', error);
-        });
+            }).addTo(map);
+
+            var polygonCenter = geojsonobjects.polygons[geojsonFeature.features[i].properties.name].getBounds().getCenter();
+
+            // Create a marker at the center of the polygon
+            geojsonobjects.markers[geojsonFeature.features[i].properties.name] = L.marker(polygonCenter, { icon: textLayer }).addTo(map);
+
+        }
+        //console.log(geojsonobjects);
+
+
+        function calculateColor(timestamp) {
+            // Calculate the time difference in milliseconds
+            const currentTime = new Date().getTime();
+            const timeDifference = currentTime - timestamp;
+
+            // Maximum time for a full transition to red (24 * 3 (3 days) hours in milliseconds)
+            const maxTimeForFullRed = 24 * 3 * 60 * 60 * 1000;
+
+            // Calculate the color value between red and green based on time
+            let colorValue = Math.min(1, timeDifference / maxTimeForFullRed);
+
+            // Calculate the RGB values based on the colorValue
+            const green = Math.round(255 * (1 - colorValue));
+            const red = Math.round(255 * colorValue);
+            const blue = 0; // Blue component is set to 0
+
+            // Return the color value as an RGB string
+            return `rgb(${red}, ${green}, ${blue})`;
         }
 
-        // Set a two-second timer
-    checkColors();
-    setInterval(checkColors, 10000);
+        function calculateColorForMarker(timestamp) {
+            // Calculate the time difference in milliseconds
+            const currentTime = new Date().getTime();
+            const timeDifference = currentTime - timestamp;
 
-</script>
+            // Maximum time for a full transition to red 3 minutes in milliseconds)
+            const maxTimeForFullRed = 4 * 60 * 1000;
+
+            if (timeDifference < maxTimeForFullRed) {
+                return "text-label_infence";
+            }
+            else {
+                return "text-label";
+            }
+        }
+
+        function calculateOffline(timestamp) {
+            // Calculate the time difference in milliseconds
+            const currentTime = new Date().getTime();
+            const timeDifference = currentTime - timestamp;
+
+            // Maximum time for a full transition to red 3 minutes in milliseconds)
+            const maxTimeForFullRed = 4 * 60 * 1000;
+
+            if (timeDifference < maxTimeForFullRed) {
+                return "Online";
+            }
+            else {
+                return "Offline";
+            }
+
+        }
+
+
+
+        function checkColors() {
+            axios.get('/snowdog/api.php?geojson=1&apikey=1234')
+                .then(response => {
+                    // Handle the JSON data
+                    for (var i = 0; i < response.data.length; i++) {
+
+                        const dateObject = new Date(response.data[i].latest_ts);
+                        const color = calculateColor(dateObject.getTime());
+
+                        try {
+                            var updatestring = "Viimeksi käyty:<br>" + response.data[i].latest_ts;
+                            geojsonobjects.polygons[response.data[i].in_area].setStyle({ fillColor: color });
+                            geojsonobjects.polygons[response.data[i].in_area].bindPopup(updatestring);
+
+                            var textLayer = L.divIcon({
+                                className: calculateColorForMarker(dateObject.getTime()),
+                                html: '<div><i class="iconoir-antenna-signal"></i><em>' + response.data[i].in_area + '</em></div>'
+                            });
+
+                            geojsonobjects.markers[response.data[i].in_area].setIcon(textLayer);
+                            geojsonobjects.markers[response.data[i].in_area].bindPopup(updatestring);
+
+
+                        } catch (error) {
+                            //console.log(error);
+                        }
+                    }
+                })
+                .catch(error => {
+                    // Handle errors
+                    console.error('Axios error:', error);
+                });
+
+            axios.get('/snowdog/api.php?lastonline=1&apikey=1234')
+                .then(response => {
+                    //console.log(response);
+                    // Handle the JSON data
+                    const dateObject = new Date(response.data.online);
+                    var updatestring = 'Snowdog Tracker 1.0<br><i class="iconoir-antenna-signal"></i>' + calculateOffline(dateObject.getTime());
+                    document.querySelector('.overlay-text-bottom').innerHTML = updatestring;
+
+                })
+                .catch(error => {
+                    // Handle errors
+                    console.error('Axios error:', error);
+                });
+        }
+        // Set a two-second timer
+        checkColors();
+        setInterval(checkColors, 10000);
+
+    </script>
 
 </body>
 
