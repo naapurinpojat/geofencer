@@ -1,0 +1,68 @@
+body {
+    padding: 0;
+    margin: 0;
+}
+
+html,
+body,
+#map {
+    height: 100%;
+    width: 100vw;
+}
+
+.text-label {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background-color: rgb(187, 187, 187);
+    padding: 5px;
+    font-weight: normal;
+    border: 1px solid #8a8a8a;
+    border-radius: 50%;
+}
+
+.text-label_infence {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background-color: rgb(0, 158, 21);
+    padding: 5px;
+    font-weight: normal;
+    border: 1px solid #008612;
+    border-radius: 50%;
+}
+
+.overlay-text {
+    position: absolute;
+    top: 5%;
+    left: 10%;
+    transform: translate(-50%, -50%);
+    font-size: 2em;
+    font-weight: bold;
+    color: rgb(84, 101, 255);
+    text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+}
+
+.overlay-text-bottom {
+    position: absolute;
+    top: 10%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2em;
+    font-weight: bold;
+    color: rgb(84, 101, 255);
+    background-color: rgba(255, 255, 255, 0.5);
+    border-radius: 10px;
+    padding: 10px;
+    text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    font-family: 'Tahoma', 'sans-serif';
+    font-size: 24px;
+}
+.leaflet-layer,
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out,
+.leaflet-control-attribution {
+filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
