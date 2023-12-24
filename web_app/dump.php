@@ -1,6 +1,6 @@
 <?php
-include 'config.php';
-include 'gitversion.php';
+require_once 'config.php';
+require_once 'gitversion.php';
 
 $conn = new mysqli($servername, $username, $password, $dbname);
 

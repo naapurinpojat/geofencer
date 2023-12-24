@@ -1,6 +1,6 @@
 <?php
-include 'config.php';
-include 'gitversion.php';
+require_once 'config.php';
+require_once 'gitversion.php';
 
 define('DEBUG_PRINT', TRUE);
 // Create a simple SVG image of a dog
@@ -31,7 +31,7 @@ $data = array(
 
 $apikey_string = '0028b076-ca97-44c5-9603-bdfc38e2718e';
 // Check if it's a GET request
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['apikey']) && ($_GET['apikey'] === $apikey_string || $_GET['api_key'] === $apikey_string) && !isset($_GET['geojson'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['api_key']) && ($_GET['api_key'] === $apikey_string || $_GET['api_key'] === $apikey_string) && !isset($_GET['geojson'])) {
     header('Content-Type: image/svg+xml');
 
     // Generate and echo the SVG image
@@ -40,11 +40,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['apikey']) && ($_GET['ap
  
     //echo json_encode($_GET);
 }
-elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['apikey']) && isset($_GET['version'])) {
+elseif($_SERVER['REQUEST_METHOD'] === 'GET' && !isset($_GET['api_key']) && isset($_GET['version'])) {
     header('Content-Type: application/json');
     echo json_encode(array('version' => GIT_REVISION));
 }
-elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['apikey']) && isset($_GET['geojson'])) {
+elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['api_key']) && isset($_GET['geojson'])) {
 
     // Assuming you have a database connection
     $conn = new mysqli($servername, $username, $password, $dbname);
@@ -75,7 +75,7 @@ elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['apikey']) && isset($
 
 
 }
-elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['apikey']) && isset($_GET['lastonline'])) {
+elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['api_key']) && isset($_GET['lastonline'])) {
 
     // Assuming you have a database connection
     $conn = new mysqli($servername, $username, $password, $dbname);
@@ -109,7 +109,7 @@ elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['apikey']) && isset($
 /*
 
 */
-elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['apikey']) && isset($_GET['backdoor'])) {
+elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['api_key']) && isset($_GET['backdoor'])) {
 
     // Assuming you have a database connection
 
