@@ -18,6 +18,14 @@ The system relies on the ECM2040, a commercial product offered by [Exertus.fi](h
 
 The system adopts a Producer-Consumer model on the edge side, incorporating a streamlined flow of data. A PHP backend is employed to store data in a MySQL database, providing a reliable and familiar infrastructure. A Python script processes NMEA data, placing it into a queue, and leveraging Redis streams for efficient data flow. Finally, consumer groups retrieve and push the information to various destinations, including the utilization of [IoT-Ticket.com](http://iot-ticket.com) for comprehensive visualization.
 
+```mermaid
+  graph TD;
+      A-->B;
+      A-->C;
+      B-->D;
+      C-->D;
+```
+
 ## Technical Specifications
 
 The core functionality is implemented through a Python script responsible for processing NMEA data. This data is strategically placed in Redis streams, facilitating a robust flow for subsequent processing by consumer groups. The resulting information is then seamlessly pushed to different locations, including the integration with IoT-Ticket.com for an immersive and dynamic map visualization.
@@ -32,3 +40,5 @@ The Snowdog Geospatial Data Collection System stands as a comprehensive solution
 
 # Running the service
 Just point and click either the fire_up_dev_env.bat or the linux equivalent and go to address http://localhost/snowdog/
+
+![Screenshot](snowdog.png)
