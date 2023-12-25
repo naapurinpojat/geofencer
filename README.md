@@ -1,6 +1,6 @@
 # Snowdog Geospatial Data Collection System
 
-The **Snowdog Geospatial Data Collection System** is a sophisticated solution designed for mountainbikers to track and visualize their routes during winter expeditions. Utilizing the Snowdog device, this system integrates various technologies to provide up-to-date trail information, ensuring a seamless user experience.
+The **Snowdog Geospatial Data Collection System** is a sophisticated solution designed for mountainbikers to track the condition of the winter trail driven by the Snowdog. Utilizing the Snowdog device, this system integrates various technologies to provide up-to-date trail information, ensuring a seamless user experience.
 
 ## Problem Statement
 
@@ -36,9 +36,32 @@ A one-page map, powered by Leafletjs, is utilized to present a heatmap of the ro
 
 # Conclusion
 
-The Snowdog Geospatial Data Collection System stands as a comprehensive solution for users seeking to collect and visualize geospatial data using geofences. This system seamlessly integrates cutting-edge technologies, providing a reliable and user-friendly experience for icefishers and fatbikers navigating winter trails.
+The Snowdog Geospatial Data Collection System stands as a comprehensive solution for users seeking to collect and visualize geospatial data using geofences. This system seamlessly integrates cutting-edge technologies, providing a reliable and user-friendly experience for mountainbikers for observing winter trail condition.
 
 # Running the service
 Just point and click either the fire_up_dev_env.bat or the linux equivalent and go to address http://localhost/snowdog/
 
 ![Screenshot](snowdog.png)
+
+# License
+```
+Copyright (c) <2023> <Juha Viitanen(https://github.com/bittikettu) & Matti Wenell(https://github.com/Mattti0)>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
