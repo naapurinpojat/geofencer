@@ -5,7 +5,7 @@ require_once 'gitversion.php';
 define('DEBUG_PRINT', TRUE);
 
 // Define a class for location
-class location {
+class Location {
     public $lat;
     public $lon;
     public $alt;
@@ -25,7 +25,6 @@ class location {
         
         // Format the local time
         $formattedTs = $utcDateTime->format('Y-m-d H:i:s');
-        // Create INSERT statement
 
         $this->lat = $lat;
         $this->lon = $lon;
@@ -62,7 +61,6 @@ class location {
     }
 }
 
-
 function queryHelper($sql) {
     $conn = new mysqli(SERVER_NAME, USERNAME, PASSWORD, DBNAME);
     $result = $conn->query($sql);
@@ -88,21 +86,36 @@ function generateFailImage() {
 }
 
 
-// Check if it's a GET request
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['api_key']) && ($_GET['api_key'] === APIKEY || $_GET['api_key'] === APIKEY) && !isset($_GET['geojson'])) {
-    header('Content-Type: image/svg+xml');
-
-    // Generate and echo the SVG image
-    echo generateDogSvg(json_encode($_GET));
-    // Encode the data as JSON and output it
- 
-    //echo json_encode($_GET);
+switch ($_SERVER['REQUEST_METHOD']) {
+    case 'GET':
+        $request = $_GET;
+        break;
+    case 'POST':
+        $request = $_POST;
+        break;
+    default:
+        $request = null;
+        break;
 }
-elseif($_SERVER['REQUEST_METHOD'] === 'GET' && !isset($_GET['api_key']) && isset($_GET['version'])) {
+
+// Check if it's a GET request
+if ($_SERVER['REQUEST_METHOD'] === 'GET' 
+        && count($_GET) == 2 
+        && isset($_GET['api_key']) 
+        && ($_GET['api_key'] === APIKEY || $_GET['api_key'] === APIKEY) 
+        && !isset($_GET['geojson'])) {
+
+    header('Content-Type: image/svg+xml');
+    echo generateDogSvg(json_encode($_GET));
+}
+elseif ($_SERVER['REQUEST_METHOD'] === 'GET' 
+        && count($_GET) == 1
+        && isset($_GET['version'])) {
+
     header('Content-Type: application/json');
     echo json_encode(array('version' => GIT_REVISION));
 }
-elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['api_key']) && isset($_GET['geojson'])) {
+elseif ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['api_key']) && isset($_GET['geojson'])) {
 
     $result = queryHelper('SELECT DISTINCT in_area, MAX(ts) AS latest_ts FROM location_history GROUP BY in_area;');
 
@@ -117,12 +130,13 @@ elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['api_key']) && isset(
         echo "{}";
     }
 
-    // Close the connection
+    header('Content-Type: application/json');
     echo json_encode($json);
-
-
 }
-elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['api_key']) && isset($_GET['lastonline'])) {
+elseif ($_SERVER['REQUEST_METHOD'] === 'GET' 
+        && count($_GET) == 2 
+        && isset($_GET['api_key'])
+        && isset($_GET['lastonline'])) {
 
     $result = queryHelper('SELECT max(ts) as ts FROM `location_history`');
     if ($result->num_rows > 0) {
@@ -135,60 +149,8 @@ elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['api_key']) && isset(
         echo "{}";
     }
 
+    header('Content-Type: application/json');
     echo json_encode($json);
-
-}
-/*
-
-*/
-elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['api_key']) && isset($_GET['backdoor'])) {
-
-    // Assuming you have a database connection
-
-
-    $conn = new mysqli(SERVER_NAME, USERNAME, PASSWORD, DBNAME);
-
-    // Check connection
-    if ($conn->connect_error) {
-        die("Connection failed: " . $conn->connect_error);
-    }
-
-
-    $jsonString = '{
-        "type": "FeatureCollection",
-        "features": [
-          {
-            "type": "Feature",
-            "properties": {},
-            "geometry": {
-              "coordinates": [
-              ],
-              "type": "LineString"
-            }
-          }
-        ]
-      }';
-    $phpObject = json_decode($jsonString);
-    print_r($phpObject);
-
-    // Fetch data from your_table_name
-    $sql = "SELECT * FROM location_history order by id";
-    $result = $conn->query($sql);
-
-    if ($result->num_rows > 0) {
-
-        while ($row = $result->fetch_assoc()) {
-            array_push($phpObject->features[0]->geometry->coordinates, array(floatval($row['lon']), floatval($row['lat'])));
-        }
-
-    } else {
-        echo "{}";
-    }
-
-    // Close the connection
-    $conn->close();
-    echo json_encode($phpObject);
-
 
 }
 // {'lat': 62.8059224833, 'lon': 22.9163893333, 'alt': 44.2, 'speed': 0, 'ts': '2023-12-21T09:55:47.000Z', 'api_key': '0028b076-ca97-44c5-9603-bdfc38e2718e', 'in_area': 'Kertunlaakso'}
@@ -198,7 +160,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Check if the request data is valid
     if ($requestData !== null && ($requestData['api_key'] === APIKEY || $requestData['apikey'] === APIKEY)) {
         if(isset($requestData['lat']) && isset($requestData['lon']) && isset($requestData['alt']) && isset($requestData['speed']) && isset($requestData['ts']) && isset($requestData['in_area'])) {
-            $location = new location(
+            $location = new Location(
                 $requestData['lat'],
                 $requestData['lon'],
                 $requestData['alt'],
