@@ -3,6 +3,73 @@ require_once 'config.php';
 require_once 'gitversion.php';
 
 define('DEBUG_PRINT', TRUE);
+
+// Define a class for location
+class location {
+    public $lat;
+    public $lon;
+    public $alt;
+    public $speed;
+    public $ts;
+    public $in_area;
+    private $valid = FALSE;
+    private $conn;
+    private $sql;
+
+
+    function __construct($lat, $lon, $alt, $speed, $ts, $in_area) {
+        $utcDateTime = new DateTime($ts, new DateTimeZone('UTC'));
+        // Set the Helsinki time zone for conversion
+        $helsinkiTimeZone = new DateTimeZone('Europe/Helsinki');
+        $utcDateTime->setTimezone($helsinkiTimeZone);
+        
+        // Format the local time
+        $formattedTs = $utcDateTime->format('Y-m-d H:i:s');
+        // Create INSERT statement
+
+        $this->lat = $lat;
+        $this->lon = $lon;
+        $this->alt = $alt;
+        $this->speed = $speed;
+        $this->ts = $formattedTs;//$conn->real_escape_string($ts);
+        $this->in_area = $in_area;
+        $this->valid = TRUE;
+    }
+
+    function storeLocation() {
+        if($this->valid == TRUE) {
+            $conn = new mysqli(SERVER_NAME, USERNAME, PASSWORD, DBNAME);
+            if ($conn->connect_error) {
+                die("Connection failed: " . $conn->connect_error);
+            }
+            // realescape values
+            $this->lat = $conn->real_escape_string($this->lat);
+            $this->lon = $conn->real_escape_string($this->lon);
+            $this->alt = $conn->real_escape_string($this->alt);
+            $this->speed = $conn->real_escape_string($this->speed);
+            $this->ts = $conn->real_escape_string($this->ts);
+            $this->in_area = $conn->real_escape_string($this->in_area);
+
+            $sql = "INSERT INTO location_history (lat, lon, alt, speed, ts, in_area) VALUES ($this->lat, $this->lon, $this->alt, $this->speed, '$this->ts', '$this->in_area')";
+                
+            // Execute the query
+            $conn->query($sql);
+            $rows = $conn->affected_rows;
+            // Close the connection
+            $conn->close();
+            return $rows;
+        }
+    }
+}
+
+
+function queryHelper($sql) {
+    $conn = new mysqli(SERVER_NAME, USERNAME, PASSWORD, DBNAME);
+    $result = $conn->query($sql);
+    $conn->close();
+    return $result;
+}
+
 // Create a simple SVG image of a dog
 function generateDogSvg($text) {
     $img = '<svg viewBox="0 0 1024 1024" class="icon" version="1.1" xmlns="http://www.w3.org/2000/svg" fill="#000000">';
@@ -20,18 +87,9 @@ function generateFailImage() {
     return $img;
 }
 
-// Your data to be returned
-$data = array(
-    'message' => 'Hello, this is a simple PHP GET API!',
-    'timestamp' => time()
-);
 
-// Set the content type to JSON
-
-
-$apikey_string = '0028b076-ca97-44c5-9603-bdfc38e2718e';
 // Check if it's a GET request
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['api_key']) && ($_GET['api_key'] === $apikey_string || $_GET['api_key'] === $apikey_string) && !isset($_GET['geojson'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['api_key']) && ($_GET['api_key'] === APIKEY || $_GET['api_key'] === APIKEY) && !isset($_GET['geojson'])) {
     header('Content-Type: image/svg+xml');
 
     // Generate and echo the SVG image
@@ -46,17 +104,7 @@ elseif($_SERVER['REQUEST_METHOD'] === 'GET' && !isset($_GET['api_key']) && isset
 }
 elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['api_key']) && isset($_GET['geojson'])) {
 
-    // Assuming you have a database connection
-    $conn = new mysqli($servername, $username, $password, $dbname);
-
-    // Check connection
-    if ($conn->connect_error) {
-        die("Connection failed: " . $conn->connect_error);
-    }
-
-    // Fetch data from your_table_name
-    $sql = 'SELECT DISTINCT in_area, MAX(ts) AS latest_ts FROM location_history GROUP BY in_area;';
-    $result = $conn->query($sql);
+    $result = queryHelper('SELECT DISTINCT in_area, MAX(ts) AS latest_ts FROM location_history GROUP BY in_area;');
 
     if ($result->num_rows > 0) {
 
@@ -70,40 +118,24 @@ elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['api_key']) && isset(
     }
 
     // Close the connection
-    $conn->close();
     echo json_encode($json);
 
 
 }
 elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['api_key']) && isset($_GET['lastonline'])) {
 
-    // Assuming you have a database connection
-    $conn = new mysqli($servername, $username, $password, $dbname);
-
-    // Check connection
-    if ($conn->connect_error) {
-        die("Connection failed: " . $conn->connect_error);
-    }
-
-    // Fetch data from your_table_name
-    $sql = 'SELECT max(ts) as ts FROM `location_history`';
-    $result = $conn->query($sql);
-
+    $result = queryHelper('SELECT max(ts) as ts FROM `location_history`');
     if ($result->num_rows > 0) {
 
         $json = [];
         while ($row = $result->fetch_assoc()) {
             $json = array('online' => $row['ts']);
         }
-
     } else {
         echo "{}";
     }
 
-    // Close the connection
-    $conn->close();
     echo json_encode($json);
-
 
 }
 /*
@@ -114,7 +146,7 @@ elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['api_key']) && isset(
     // Assuming you have a database connection
 
 
-    $conn = new mysqli($servername, $username, $password, $dbname);
+    $conn = new mysqli(SERVER_NAME, USERNAME, PASSWORD, DBNAME);
 
     // Check connection
     if ($conn->connect_error) {
@@ -159,69 +191,43 @@ elseif($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['api_key']) && isset(
 
 
 }
+// {'lat': 62.8059224833, 'lon': 22.9163893333, 'alt': 44.2, 'speed': 0, 'ts': '2023-12-21T09:55:47.000Z', 'api_key': '0028b076-ca97-44c5-9603-bdfc38e2718e', 'in_area': 'Kertunlaakso'}
 elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $requestData = json_decode(file_get_contents("php://input"), true);
 
     // Check if the request data is valid
-    if ($requestData !== null && ($requestData['api_key'] === $apikey_string || $requestData['apikey'] === $apikey_string)) {
-        // Merge request data with the existing data
-        //$data = array_merge($data, $requestData);
-        $lat = $requestData['lat'];
-        $lon = $requestData['lon'];
-        $alt = $requestData['alt'];
-        $speed = $requestData['speed'];
-        $ts = $requestData['ts'];
-        $in_area = $requestData['in_area'];
+    if ($requestData !== null && ($requestData['api_key'] === APIKEY || $requestData['apikey'] === APIKEY)) {
+        if(isset($requestData['lat']) && isset($requestData['lon']) && isset($requestData['alt']) && isset($requestData['speed']) && isset($requestData['ts']) && isset($requestData['in_area'])) {
+            $location = new location(
+                $requestData['lat'],
+                $requestData['lon'],
+                $requestData['alt'],
+                $requestData['speed'],
+                $requestData['ts'],
+                $requestData['in_area']
+            );
+            
+            if($location->storeLocation() != 0) {
+                echo json_encode(array('status' => 'Ok'));
+            }
+            else {
+                echo json_encode(array('status' => 'Error'));
+            }
 
-        $conn = new mysqli($servername, $username, $password, $dbname);
-        if ($conn->connect_error) {
-            die("Connection failed: " . $conn->connect_error);
         }
-        //$formattedTs = date('Y-m-d H:i:s', strtotime($ts));
+        else {
 
-        $utcDateTime = new DateTime($ts, new DateTimeZone('UTC'));
-
-        // Set the Helsinki time zone for conversion
-        $helsinkiTimeZone = new DateTimeZone('Europe/Helsinki');
-        $utcDateTime->setTimezone($helsinkiTimeZone);
-        
-        // Format the local time
-        $formattedTs = $utcDateTime->format('Y-m-d H:i:s');
-
-
-        // Create INSERT statement
-        $lat = $conn->real_escape_string($lat);
-        $lon = $conn->real_escape_string($lon);
-        $alt = $conn->real_escape_string($alt);
-        $speed = $conn->real_escape_string($speed);
-        $ts = $formattedTs;//$conn->real_escape_string($ts);
-        $in_area = $conn->real_escape_string($in_area);
-        
-        // Create INSERT statement without prepare
-        $sql = "INSERT INTO location_history (lat, lon, alt, speed, ts, in_area) VALUES ($lat, $lon, $alt, $speed, '$ts', '$in_area')";
-        echo $sql;
-        
-        
-        // Execute the query
-        $conn->query($sql);
-        
-        // Close the connection
-        $conn->close();
-
-
-        echo json_encode(array('status' => 'Ok'));
+        }
     } else {
         // If the request data is not valid, return an error
         http_response_code(400); // Bad Request
-        echo json_encode(array('status' => 'Invalid JSON data'));
+        echo json_encode(array('status' => 'Not all fields set'));
     }
 }
 else {
-    //header('Content-Type: application/json');
-    // If it's not a GET request, return an error
     header('Content-Type: image/svg+xml');
-    //http_response_code(405); // Method Not Allowed
+    header("Cache-Control: no-cache, must-revalidate");
+    header("Expires: 0");
     echo generateFailImage();
-    //echo json_encode(array('error' => 'Method not allowed'));
 }
 ?>

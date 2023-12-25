@@ -2,7 +2,7 @@
 require_once 'config.php';
 require_once 'gitversion.php';
 
-$conn = new mysqli($servername, $username, $password, $dbname);
+$conn = new mysqli(SERVER_NAME, USERNAME, PASSWORD, DBNAME);
 
 // Check connection
 if ($conn->connect_error) {

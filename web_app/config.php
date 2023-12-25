@@ -3,8 +3,8 @@
     $mysqlserver = getenv('SQL_SERVER');
 
     if ($mysqlserver !== false) {
-        $servername = $mysqlserver;
+        define('SERVER_NAME', $mysqlserver);
     } else {
-        $servername = "localhost";
+        define('SERVER_NAME', "localhost");
     }
 ?>
