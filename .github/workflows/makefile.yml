@@ -20,5 +20,5 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v2
       with:
-        name: snowdog.tgz
+        name: snowdog
         path: snowdog.tgz
