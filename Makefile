@@ -5,7 +5,7 @@ REVISION_SCRIPT := getrevision.sh
 REVISION=$(shell ./${REVISION_SCRIPT})
 GIT_VERSION_PY := edge/gitversion.py
 GIT_VERSION_PHP := web_app/gitversion.php
-PACKAGE_NAME := snowdog_${REVISION}.tgz
+PACKAGE_NAME := snowdog.tgz
 
 # Define targets and rules
 all: $(GIT_VERSION_PY) $(GIT_VERSION_PHP) $(PACKAGE_NAME)
