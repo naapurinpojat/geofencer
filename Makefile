@@ -2,9 +2,10 @@
 
 # Define variables
 REVISION_SCRIPT := getrevision.sh
-GIT_VERSION_PY := gitversion.py
+REVISION=$(shell ./${REVISION_SCRIPT})
+GIT_VERSION_PY := edge/gitversion.py
 GIT_VERSION_PHP := web_app/gitversion.php
-PACKAGE_NAME := dog.zip
+PACKAGE_NAME := snowdog_${REVISION}.tgz
 
 # Define targets and rules
 all: $(GIT_VERSION_PY) $(GIT_VERSION_PHP) $(PACKAGE_NAME)
@@ -24,10 +25,10 @@ $(GIT_VERSION_PY):
 	echo "git_revision = '$$REVISION'" > $(GIT_VERSION_PY)
 	@echo "Git version information stored in $(GIT_VERSION_PY)"
 
-# Zip the Python files into a package named by dog.zip
+# Tgz the Python files into a package named by snowdog.tgz
 $(PACKAGE_NAME): $(GIT_VERSION_PY)
 	@echo "Creating package $(PACKAGE_NAME)..."
-	@zip -r $(PACKAGE_NAME) *.py
+	@cd edge && tar -czvf ../$(PACKAGE_NAME) *
 	@echo "Package $(PACKAGE_NAME) created successfully"
 
 # Clean up intermediate files

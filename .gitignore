@@ -3,5 +3,6 @@ temp/
 secrets.py
 *.pem
 gitversion.py
-dog.zip
+.zip
 web_app/gitversion.php
+*.tgz
