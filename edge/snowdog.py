@@ -81,10 +81,11 @@ class MQTTPublisher(Thread):
             if connection_check_delta.total_seconds() >= 1:
                 retries += 1
 
+                self.client.connect()
+
                 if retries > 10:
-                    logger.critical("Couldn't connect MQTT broker, shutting down")
-                    self.shutdown_event.set()
-                    break
+                    logger.critical("Couldn't connect MQTT broker")
+                    return
 
             sleep(MS_100)
 
@@ -264,7 +265,6 @@ class RestPublisher(Thread):
             sleep(MS_1000)
 
         while not self.shutdown_event.is_set():
-
             data = g_last_known_pos.copy()
             distance_between = None
             if self.last_sent_pos:
@@ -353,11 +353,20 @@ def main():
     mqtt_publisher_thread.start()
     rest_publisher_thread.start()
 
+    threadslist = [nmeareader_thread, redis_publisher_thread, mqtt_publisher_thread, rest_publisher_thread]
+
     while not shutdown_event.is_set():
         try:
             # Update time in main thread so no need to get that on every thread
             g_time = datetime.datetime.now()
             g_date = datetime.date.today()
+
+            if not shutdown_event.is_set():
+                for thread in threadslist:
+                    if not thread.is_alive():
+                        logger.critical(f"{thread.name} is not running, trying to restart")
+                        thread.start()
+
             sleep(1)
         except KeyboardInterrupt:
             logger.info("Terminated by keyboard... Shutting down")
