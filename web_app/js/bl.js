@@ -39,7 +39,7 @@ if (xhr.status === 200) {
 
 // Add OpenStreetMap tile layer
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors, SupremeSolution Experts,' + appversion.version,
+    attribution: '© OpenStreetMap contributors, Naapurinpojat,' + appversion.version + "<a href='https://github.com/bittikettu/snowdog' target='_blank'>Github</a>",
 }).addTo(map);
 
 // Example GeoJSON data
