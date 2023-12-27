@@ -151,7 +151,7 @@ function lastOnline($obj, $request) {
  * This function registers all the path handlers for the API 
  */
 function snowdogAPI(){
-    $api = new Api();
+    $api = new superLiteAPI();
     $api->registerPathHandler('version', 'GET', 'getVersion');
     $api->registerPathHandler('version/ui', 'GET', 'getVersion');
     $api->registerPathHandler('location', 'POST', 'saveLocation');

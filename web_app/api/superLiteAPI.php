@@ -20,7 +20,7 @@ class PathHandler{
 }
 
 
-class Api {
+class superLiteAPI {
     private $pathHandlers = array();
     private $path = null;
     private $methods = array('GET', 'POST', 'PUT', 'DELETE');
