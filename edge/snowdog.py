@@ -16,7 +16,10 @@ import secrets
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-logger.addHandler(logging.StreamHandler())
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+handler = logging.StreamHandler()
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 g_time = None
 g_date = None
@@ -186,6 +189,9 @@ class MQTTPublisher(Thread):
 
             sleep(MS_100)
 
+        if self.client.is_connected():
+            logger.info("MQTT client connected")
+
         while not self.shutdown_event.is_set():
             if self.client.is_connected():
                 last_connection_check = g_time
@@ -204,7 +210,7 @@ class MQTTPublisher(Thread):
                     try:
                         mqtt_message_info = self.client.publish(self.topic, ts_json)
                         if not mqtt_message_info.is_published():
-                            logger.debug(f"Data not published {mqtt_message_info.rc}")
+                            logger.warning(f"Data not published {mqtt_message_info.rc}")
                     except RuntimeError as rterr:
                         logger.critical(rterr)
 
