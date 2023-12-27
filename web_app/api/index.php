@@ -12,26 +12,28 @@ class PathHandler{
         $this->method = $method;
         $this->handler = $handler;
     }
-    public function setCallback($request) {
-         call_user_func($this->handler, $this->method, $request);
+    public function requestCallback($request) {
+        call_user_func($this->handler, $this, $request);
     }
 }
 
 class Api {
 
     private $pathHandlers = array();
+    private $path = null;
     private $methods = array('GET', 'POST', 'PUT', 'DELETE');
     private $method = null;
     public $request = null;
     public function __construct() {
+        $this->path = array_slice(explode('/', $_SERVER['REQUEST_URI']), 3);
         $this->method = $_SERVER['REQUEST_METHOD'];
         if ($this->method === 'POST') {
-        
+
             // Check if the "Content-Type" header is set
             if (isset($_SERVER['CONTENT_TYPE'])) {
                 
                 $contentType = $_SERVER['CONTENT_TYPE'];
-    
+   
                 // Parse data based on content type
                 switch ($contentType) {
                     case 'application/json':
@@ -50,18 +52,18 @@ class Api {
                         $parsedData = null;
                         break;
                 }
-                $request = $parsedData;
+                $this->request = $parsedData;
             } else {
                 // Content Type header is not set
-                $request = null;
+                $this->request = null;
             }
         } 
         elseif ($this->method === 'GET') {
-            $request = $_GET;
+            $this->request = $_GET;
         }
         else {
             // This is not a POST request
-            $request = null;
+            $this->request = null;
         }
     }
 
@@ -69,11 +71,11 @@ class Api {
         array_push($this->pathHandlers, new PathHandler($path, $method, $handler));
     }
 
-    public function runPathHandlers($path) {
+    public function runPathHandlers() {
         foreach($this->pathHandlers as $handler) {
-            $pathstr = implode("/", $path);
+            $pathstr = implode("/", $this->path);
             if($handler->path === $pathstr && $handler->method == $this->method) {
-                $handler->setCallback($handler->handler, $path, $this->request);
+                 $handler->requestCallback($this->request);
             }
         }
     }
@@ -83,17 +85,23 @@ class Api {
     }
 }
 
-function getVersion($path, $request) {
+function getVersion($obj, $request) {
     header('Content-Type: application/json');
     echo json_encode(array('version' => GIT_REVISION));
 }
 
+function saveLocation($obj, $request) {
+    print_r($request);
+}
+
 $api = new Api();
+//print_r($api);
 $api->registerPathHandler('version', 'GET', 'getVersion');
 $api->registerPathHandler('version/ui', 'GET', 'getVersion');
+$api->registerPathHandler('location', 'POST', 'saveLocation');
 //$api->printHandlers();
-$path = array_slice(explode('/', $_SERVER['REQUEST_URI']), 3);
+//$path = array_slice(explode('/', $_SERVER['REQUEST_URI']), 3);
 
-$api->runPathHandlers($path);
+$api->runPathHandlers();
 
 ?>
