@@ -9,7 +9,7 @@ import datetime
 from math import radians, sin, cos, sqrt, atan2
 import gitversion
 
-from MQTTClient import MQTTClient
+from edge.mqtt_client import MqttClient
 from RedisClient import RedisClient
 
 import secrets
@@ -31,7 +31,7 @@ MS_100 = 0.1
 MS_1000 = 1
 
 class MQTTPublisher(Thread):
-    def __init__(self, name, client: MQTTClient, topic: str, redis_client, shutdown_event: Event):
+    def __init__(self, name, client: MqttClient, topic: str, redis_client, shutdown_event: Event):
         super().__init__(name=name)
         self.client = client
         self.topic = topic
@@ -340,7 +340,7 @@ def main():
 
     io_queue = queue.Queue(maxsize=100)
 
-    mqtt_client = MQTTClient(secrets.HTTP_ADAPTER_IP, secrets.MQTT_PORT, mqtt_client_name, f"{secrets.MY_DEVICE}@{secrets.MY_TENANT}", secrets.MY_PWD, ssl_file=secrets.CERT_FILE, logger=logger)
+    mqtt_client = mqtt_client(secrets.HTTP_ADAPTER_IP, secrets.MQTT_PORT, mqtt_client_name, f"{secrets.MY_DEVICE}@{secrets.MY_TENANT}", secrets.MY_PWD, ssl_file=secrets.CERT_FILE, logger=logger)
     redis_client = RedisClient('localhost', 6379, redis_topic, redis_consumer_group, redis_consumer_name, logger=logger)
 
     nmeareader_thread = NMEAStreamReader('NMEAStreamReader', '/dev/EG25.NMEA', io_queue, shutdown_event)
