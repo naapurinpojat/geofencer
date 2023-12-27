@@ -1,16 +1,16 @@
 import requests
 from pynmeagps import NMEAReader
 import json
-import paho.mqtt.client as pahomqtt
-import redis
 from time import sleep
-import ssl
 import logging
 from threading import Thread, Event
 import queue
 import datetime
 from math import radians, sin, cos, sqrt, atan2
 import gitversion
+
+from MQTTClient import MQTTClient
+from RedisClient import RedisClient
 
 import secrets
 
@@ -29,108 +29,6 @@ g_last_known_pos = {'lat': 0, 'lon': 0, 'alt': 0, 'speed': 0, 'ts': None}
 MS_10 = 0.01
 MS_100 = 0.1
 MS_1000 = 1
-
-class MQTTClient:
-    def __init__(self, broker_address, broker_port, client_id, username=None, password=None, ssl_file=None):
-        self.logger = logging.getLogger(__name__)
-        self.broker_address = broker_address
-        self.broker_port = broker_port
-        self.client_id = client_id
-        self.context = None
-        self.connection_retries = 0
-
-        self.client = pahomqtt.Client(self.client_id, protocol=pahomqtt.MQTTv5)
-
-        if ssl_file:
-            self.context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-            self.context.load_verify_locations(ssl_file)
-            self.client.tls_set_context(self.context)
-
-        if username and password:
-            self.client.username_pw_set(username, password)
-
-        self.client.on_connect = self.on_connect
-        self.client.on_disconnect = self.on_disconnect
-
-    def on_connect(self, client, userdata, flags, rc, properties):
-        self.logger.info(f'Connected to MQTT broker {self.broker_address}:{self.broker_port}')
-        self.connection_retries = 0
-        
-    def on_disconnect(self, client, userdata, rc, properties):
-        self.logger.warning(f'Disconnected from MQTT broker ({rc}) {properties}')
-
-    def keep_connected(self):
-        if not self.client.is_connected():
-            self.connection_retries += 1
-            self.client.reconnect()
-
-    def is_connected(self):
-        return self.client.is_connected()
-
-    def connect(self):
-        self.client.connect(self.broker_address, self.broker_port)
-        self.client.loop_start()
-
-    def disconnect(self):
-        self.client.disconnect()
-        self.client.loop_start()
-
-    def publish(self, topic, data):
-        return self.client.publish(topic, data)
-
-    def get_connection_retries(self):
-        return self.connection_retries
-    
-class RedisClient:
-    def __init__(self, host, port, topic, consumer_group, consumer_name):
-        self.host = host
-        self.port = port
-        self.topic = topic
-        self.consumer_group = consumer_group
-        self.consumer_name = consumer_name
-
-        self.client = redis.Redis(host=host, port=port, decode_responses=True)
-
-        try:
-            self.client.xgroup_create(self.topic, self.consumer_group, id=0, mkstream=True)
-        except:
-            logger.debug("Consumer group most likely already existing")
-            pass
-
-        logger.debug("Redis client initialised")
-        start_time = g_time
-        while True:
-            time_diff = g_time - start_time
-            info = self.client.info()
-            if info.get('loading', 1) == 1:
-                sleep(MS_1000)
-            else:
-                break
-
-            if time_diff.total_seconds() >= 60:
-                logger.critical("Couldn't establish connection to redis")
-                self.shutdown_event.set()
-                break         
-
-        logger.debug("Redis loaded")
-
-    def read_messages(self, initial=False):
-        count = 1
-
-        messages_ret = []
-        messages = self.client.xreadgroup(self.consumer_group, self.consumer_name, {self.topic: '>'}, count=count)
-        for mes in messages:
-            for mes_id, mes_data in mes[1]:
-                messages_ret.append(mes_data)
-                self.client.xack(mes[0], self.consumer_group, mes_id)
-
-        return messages_ret
-    
-    def add_message(self, message):
-        self.client.xadd(self.topic, message)
-
-    def close(self):
-        self.client.close()
 
 class MQTTPublisher(Thread):
     def __init__(self, client: MQTTClient, topic: str, redis_client, shutdown_event: Event):
@@ -440,8 +338,8 @@ def main():
 
     io_queue = queue.Queue(maxsize=100)
 
-    mqtt_client = MQTTClient(secrets.HTTP_ADAPTER_IP, secrets.MQTT_PORT, mqtt_client_name, f"{secrets.MY_DEVICE}@{secrets.MY_TENANT}", secrets.MY_PWD, ssl_file=secrets.CERT_FILE)
-    redis_client = RedisClient('localhost', 6379, redis_topic, redis_consumer_group, redis_consumer_name)
+    mqtt_client = MQTTClient(secrets.HTTP_ADAPTER_IP, secrets.MQTT_PORT, mqtt_client_name, f"{secrets.MY_DEVICE}@{secrets.MY_TENANT}", secrets.MY_PWD, ssl_file=secrets.CERT_FILE, logger=logger)
+    redis_client = RedisClient('localhost', 6379, redis_topic, redis_consumer_group, redis_consumer_name, logger=logger)
 
     nmeareader_thread = NMEAStreamReader('/dev/EG25.NMEA', io_queue, shutdown_event)
     redis_publisher_thread = RedisPublisher(redis_client, io_queue, shutdown_event)
