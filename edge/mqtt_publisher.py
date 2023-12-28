@@ -7,7 +7,7 @@ from threading import Thread
 from utils import Utils as utils
 from redis_client import RedisConsumer
 from mqtt_client import MqttClient
-import device_secrets as secrets
+import secrets
 
 
 def iot_ticket_formatter(data):

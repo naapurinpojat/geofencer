@@ -37,7 +37,7 @@ from redis_client import RedisClient, RedisConsumer
 from mqtt_publisher import MQTTPublisher
 from rest_publisher import RestPublisher
 
-import device_secrets as secrets
+import secrets
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -226,7 +226,7 @@ def main():
                                           logger=logger)
 
     rest_publisher_thread = RestPublisher('RestPublisher',
-                                          '/home/mawen/coding/snowdog/git/snowdog/edge/map.geojson',
+                                          '/home/snowdog/map.geojson',
                                           secrets.WEB_API,
                                           secrets.API_KEY,
                                           redis_rest_consumer,
