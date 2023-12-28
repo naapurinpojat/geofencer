@@ -77,35 +77,41 @@ class MQTTPublisher(Thread):
         self.client.connect()
 
         while not self.shutdown:
-            if self.client.is_connected():
-                last_connection_check = utils.get_time()
-                messages = self.redis_client.read_messages()
+            try:
+                if self.client.is_connected():
+                    last_connection_check = utils.get_time()
+                    messages = self.redis_client.read_messages()
 
-                ts_buffer = []
+                    ts_buffer = []
 
-                for redis_data in messages:
-                    topic, data = iot_ticket_formatter(redis_data)
-                    if topic == 'location':
-                        ts_buffer.append(data)
+                    for redis_data in messages:
+                        topic, data = iot_ticket_formatter(redis_data)
+                        if topic == 'location':
+                            ts_buffer.append(data)
 
-                if len(ts_buffer) > 0:
-                    ts_json = json.dumps({'t_set': ts_buffer}, ensure_ascii=False)
+                    if len(ts_buffer) > 0:
+                        ts_json = json.dumps({'t_set': ts_buffer}, ensure_ascii=False)
 
-                    try:
-                        mqtt_message_info = self.client.publish(self.mqtt_topic, ts_json)
-                        if not mqtt_message_info.is_published():
-                            self.logger.warning("Data not published %d", mqtt_message_info.rc)
-                    except RuntimeError as rterr:
-                        self.logger.critical(rterr)
+                        try:
+                            mqtt_message_info = self.client.publish(self.mqtt_topic, ts_json)
+                            if not mqtt_message_info.is_published():
+                                self.logger.warning("Data not published %d", mqtt_message_info.rc)
+                        except RuntimeError as rterr:
+                            self.logger.critical(rterr)
 
-            elif utils.timedelta_seconds(last_connection_check, utils.get_time()) >= 10:
-                last_connection_check = utils.get_time()
-                self.logger.critical("MQTT client not connected, trying to reconnect")
+                elif utils.timedelta_seconds(last_connection_check, utils.get_time()) >= 10:
+                    last_connection_check = utils.get_time()
+                    self.logger.critical("MQTT client not connected, trying to reconnect")
 
-                if self.client.get_connection_retries() < 10:
-                    self.client.keep_connected()
-                else:
-                    break
+                    if self.client.get_connection_retries() < 10:
+                        self.client.keep_connected()
+                    else:
+                        raise
+            except Exception as error:
+                self.logger.critical("MQTT connection failed. Trying manual reconnect")
+                self.client.disconnect()
+                utils.sleep_ms(10 * 1000)
+                self.client.connect()
 
             utils.sleep_ms(self.period)
 
