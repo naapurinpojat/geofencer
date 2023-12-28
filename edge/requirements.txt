@@ -1,0 +1,4 @@
+paho-mqtt==1.6.1
+redis==5.0.1
+requests==2.31.0
+pynmeagps==1.0.32

@@ -1,3 +1,4 @@
+"""Hold secrets used in production"""
 MY_DEVICE = ""
 MY_PWD=""
 MY_TENANT=""

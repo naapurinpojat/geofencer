@@ -2,6 +2,8 @@
 import ssl
 import paho.mqtt.client as pahomqtt
 
+from utils import Utils as utils
+
 class MqttClient:
     """
     Class to handle MQTT client connections
@@ -38,14 +40,24 @@ class MqttClient:
     def on_connect(self, client, userdata, flags, result_code, properties):
         """on_connect callback"""
         # pylint: disable=too-many-arguments
-        _ = (client, userdata, flags, result_code, properties) # unused
-        self.logger.info(f'Connected to MQTT broker {self.broker_address}:{self.broker_port}')
-        self.connection_retries = 0
+        _ = (client, userdata, flags, properties) # unused
+        if result_code == 0:
+            self.logger.info(f'Connected to MQTT broker {self.broker_address}:{self.broker_port}')
+            self.connection_retries = 0
+        else:
+            self.logger \
+                .critical(f"Failed to connect to the MQTT broker with result code {result_code}")
+            raise Exception(f"Connection failed with result code {result_code}")
+
 
     def on_disconnect(self, client, userdata, result_code, properties):
         """on_disconnect callback"""
-        _ = (client, userdata) # unused
-        self.logger.warning(f'Disconnected from MQTT broker ({result_code}) {properties}')
+        _ = (client, userdata, properties) # unused
+        if result_code != 0:
+            self.logger.warning(f'Disconnected suddenly from MQTT broker ({result_code})')
+        else:
+            self.logger.info("Disconnected from MQTT broker succesfully")
+        self.client.loop_stop()
 
     def keep_connected(self):
         """"method to keep client connected"""
@@ -59,13 +71,24 @@ class MqttClient:
 
     def connect(self):
         """method to connect client to broker"""
-        self.client.connect(self.broker_address, self.broker_port)
-        self.client.loop_start()
+        try:
+            time_beginning = utils.get_time()
+            self.client.connect(self.broker_address, self.broker_port)
+            self.client.loop_start()
+
+            while not self.is_connected():
+                utils.sleep_ms(100)
+
+                if utils.timedelta_seconds(time_beginning, utils.get_time()) > 10:
+                    raise ConnectionError("Timeout, couldn't connect MQTT broker")
+
+        except Exception as error:
+            _ = (error) # unused variable
+            raise
 
     def disconnect(self):
         """method to disconnect client"""
         self.client.disconnect()
-        self.client.loop_start()
 
     def publish(self, topic, data):
         """method to publish new message to broker"""
