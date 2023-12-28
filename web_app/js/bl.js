@@ -179,7 +179,7 @@ function checkColors() {
         headers: apiheader
       })
         .then(response => {
-            //console.log(response);
+            console.log(response);
             // Handle the JSON data
             const dateObject = new Date(response.data.online);
             var updatestring = 'Snowdog Tracker ' + appversion.version + '<br><i class="iconoir-antenna-signal"></i>' + calculateOffline(dateObject.getTime());
