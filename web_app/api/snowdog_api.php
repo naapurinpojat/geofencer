@@ -33,6 +33,11 @@ class Location {
         $this->valid = TRUE;
     }
 
+    function getSQLclause() {
+        $this->sql = "INSERT INTO location_history (lat, lon, alt, speed, ts, in_area) VALUES ($this->lat, $this->lon, $this->alt, $this->speed, '$this->ts', '$this->in_area')";
+        return $this->sql;
+    }
+
     function storeLocation() {
         if($this->valid == TRUE) {
             $conn = new mysqli(SERVER_NAME, USERNAME, PASSWORD, DBNAME);
@@ -48,13 +53,12 @@ class Location {
             $this->in_area = $conn->real_escape_string($this->in_area);
 
             $sql = "INSERT INTO location_history (lat, lon, alt, speed, ts, in_area) VALUES ($this->lat, $this->lon, $this->alt, $this->speed, '$this->ts', '$this->in_area')";
-                
-            // Execute the query
+             // Execute the query
             $conn->query($sql);
             $rows = $conn->affected_rows;
             // Close the connection
             $conn->close();
-            return $rows;
+            return $sql;
         }
     }
 }
@@ -82,34 +86,50 @@ function getVersion($obj, $request) {
 /**
  * This function saves the location of the user
  */
-function saveLocation($obj, $request) {
-    print_r($request);
-    if ($request !== null && ($request['api_key'] === APIKEY || $request['apikey'] === APIKEY)) {
-        if(isset($request['lat']) && isset($request['lon']) && isset($request['alt']) && isset($request['speed']) && isset($request['ts']) && isset($request['in_area'])) {
-            $location = new Location(
-                $request['lat'],
-                $request['lon'],
-                $request['alt'],
-                $request['speed'],
-                $request['ts'],
-                $request['in_area']
-            );
-            
-            if($location->storeLocation() != 0) {
-                echo json_encode(array('status' => 'Ok'));
-            }
-            else {
-                echo json_encode(array('status' => 'Error'));
-            }
-
+function saveLocation($obj, $api) {
+    if(isset($api->request['lat']) && isset($api->request['lon']) && isset($api->request['alt']) && isset($api->request['speed']) && isset($api->request['ts']) && isset($api->request['in_area'])) {
+        $location = new Location(
+            $api->request['lat'],
+            $api->request['lon'],
+            $api->request['alt'],
+            $api->request['speed'],
+            $api->request['ts'],
+            $api->request['in_area']
+        );
+        if($location->storeLocation() != 0) {
+            echo json_encode(array('status' => 'Ok'));
         }
         else {
-
+            echo json_encode(array('status' => 'Error'));
         }
-    } else {
-        // If the request data is not valid, return an error
-        http_response_code(400); // Bad Request
-        echo json_encode(array('status' => 'Not all fields set'));
+    }
+    else {
+        if($api->request != null) {
+            $locations = array();
+            foreach($api->request as $req) {
+                if(isset($req['lat']) && isset($req['lon']) && isset($req['alt']) && isset($req['speed']) && isset($req['ts']) && isset($req['in_area'])) {
+                    $location = new Location(
+                        $req['lat'],
+                        $req['lon'],
+                        $req['alt'],
+                        $req['speed'],
+                        $req['ts'],
+                        $req['in_area']
+                    );
+                    array_push($locations, $location);
+                }
+            }
+            if(count($locations) > 0) {
+                $conn = $api->connectDB();
+                $rows = 0;
+                foreach($locations as $location) {
+                    $result = $conn->query($location->getSQLclause());
+                    $rows += $conn->affected_rows;
+                }
+                $api->closeDB($conn);
+                echo json_encode(array('status' => 'Ok', 'rows' => $rows));
+            }
+        }
     }
 }
 
@@ -151,7 +171,7 @@ function lastOnline($obj, $request) {
  * This function registers all the path handlers for the API 
  */
 function snowdogAPI(){
-    $api = new superLiteAPI();
+    $api = new superLiteAPI(APIKEY);
     $api->registerPathHandler('version', 'GET', 'getVersion');
     $api->registerPathHandler('version/ui', 'GET', 'getVersion');
     $api->registerPathHandler('location', 'POST', 'saveLocation');
