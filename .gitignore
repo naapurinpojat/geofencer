@@ -6,3 +6,6 @@ gitversion.py
 .zip
 web_app/gitversion.php
 *.tgz
+*.log
+*.info
+venv/
