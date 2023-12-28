@@ -12,10 +12,10 @@ from utils import Fences as fences
 
 def points_from_redis(redis_data) -> dict:
     """Convert data from redis stream to rest API compatible format"""
-    return {'lat': redis_data.get('lat'),
-            'lon': redis_data.get('lon'),
-            'alt': redis_data.get('alt'),
-            'speed': 0,
+    return {'lat': float(redis_data.get('lat')),
+            'lon': float(redis_data.get('lon')),
+            'alt': float(redis_data.get('alt')),
+            'speed': float(0),
             'ts': redis_data.get('ts')}
 
 class RestPublisher(Thread):
@@ -59,6 +59,7 @@ class RestPublisher(Thread):
         self.join()
 
     def run(self):
+        self.logger.info("Starting REST publisher")
         last_sent_pos = {}
 
         # clear redis consumer buffer from old junk
@@ -84,9 +85,11 @@ class RestPublisher(Thread):
                         payload = self.build_message_json(current_point)
                         response = requests.post(self.api_url, data=payload)
 
-                        if response.status_code == 200:
-                            last_sent_pos = data
+                        self.logger.debug(response.status_code)
+                        if response.status_code == 200 or response.status_code == '200':
+                            last_sent_pos = current_point
                             last_sent_pos['ts'] = current_time # overwrite ts with nanos
+                            self.logger.debug(last_sent_pos)
 
                         else:
                             self.logger.warning("API Response: %s", response.status_code)
@@ -104,7 +107,7 @@ class RestPublisher(Thread):
         in_area_data = self.fences.in_area(data)
         if in_area_data:
             data['in_area'] = in_area_data
-        self.logger.debug(data)
+        self.logger.debug(json.dumps(data))
 
         return json.dumps(data)
 

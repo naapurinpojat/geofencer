@@ -1,7 +1,10 @@
 import queue
 from threading import Thread
 import datetime
+import time
 from pynmeagps import NMEAReader
+
+import serial
 
 from utils import Utils as utils
 from redis_client import RedisClient
@@ -29,24 +32,33 @@ class NMEAStreamReader(Thread):
         self.join()
 
     def run(self):
+
         self.logger.info("NMEAStreamReader starting")
         data_to_process = ['GPGGA', 'GPVTG']
 
-        with open(self.path, 'rb') as stream:
-            nmr = NMEAReader(stream, nmeaonly=True)
+        with serial.Serial("/dev/EG25.NMEA", 38400, timeout=0.1) as stream:
+            while True:
+                nmr = NMEAReader(stream, nmeaonly=False)
 
-            for (raw_data, parsed_data) in nmr:
-                _ = (raw_data) # not used
-                try:
-                    if parsed_data.quality == 1:
-                        if parsed_data.identity in data_to_process:
-                            self.logger.debug(parsed_data)
-                            self.queue.put_nowait(parsed_data)
-                except NMEAReader.NMEAParseError:
-                    pass
+                if stream.in_waiting:
+                    line = stream.readline()
+                    try:
+                        parsed_data = nmr.parse(line, validate=2)
+                        try:
+                            if parsed_data.quality == 1:
+                                if parsed_data.identity in data_to_process:
+                                    self.logger.debug(parsed_data)
+                                    self.queue.put_nowait(parsed_data)
+                        except Exception as e:
+                            pass
+                    except Exception as e:
+                        pass
 
-                if self.running is False:
-                    break
+                    #if self.running is False:
+                    #    break
+                #else:
+                #    print("Something else")
+                time.sleep(1)
 
         self.logger.info("NMEAStreamReader shutting down")
 
@@ -64,7 +76,7 @@ class RedisPublisher(Thread):
         super().__init__(name=name)
         self.client = client
         self.queue = data_que
-        self.logged = logger
+        self.logger = logger
         self.running = True
 
     def stop(self):
@@ -107,5 +119,7 @@ class RedisPublisher(Thread):
         except KeyError as error:
             data = None
             self.logger.debug(error)
+
+        self.logger.debug(data)
 
         return data

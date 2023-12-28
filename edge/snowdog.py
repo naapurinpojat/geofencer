@@ -39,7 +39,7 @@ from rest_publisher import RestPublisher
 import secrets
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s',
                               datefmt='%Y-%m-%d %H:%M:%S')
 handler = logging.StreamHandler()
@@ -122,12 +122,12 @@ def main():
 
     nmeareader_thread.start()
     redis_publisher_thread.start()
-    mqtt_publisher_thread.start()
+    #mqtt_publisher_thread.start()
     rest_publisher_thread.start()
 
     threadslist = [nmeareader_thread,
                    redis_publisher_thread,
-                   mqtt_publisher_thread,
+                   #mqtt_publisher_thread,
                    rest_publisher_thread
                    ]
 

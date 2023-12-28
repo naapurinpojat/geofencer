@@ -4,6 +4,7 @@ services:
   mysql:
     image: mysql:8.2
     container_name: mysql-container
+    command: --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: juhavdph_snowdog
@@ -40,6 +41,22 @@ services:
       - mynetwork
     depends_on:
       - mysql
+  
+  mqtt-broker:
+    image: eclipse-mosquitto
+    ports:
+    - "8883:8883"
+    networks:
+      - mynetwork
+
+  nmea-simulator:
+    build:
+      context: .
+      dockerfile: Dockerfile.snowdog_simulator
+    depends_on:
+      - mqtt-broker
+    networks:
+      - mynetwork
 
 networks:
   mynetwork:
