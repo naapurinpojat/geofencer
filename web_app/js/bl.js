@@ -4,6 +4,9 @@ var geojsonFeature;
 var geojsonobjects = [];
 geojsonobjects.polygons = [];
 geojsonobjects.markers = [];
+const apiheader = {
+    'apikey': '0028b076-ca97-44c5-9603-bdfc38e2718e',
+};
 
 var url = '/snowdog/map.geojson';
 // Create a synchronous XMLHttpRequest object
@@ -21,10 +24,11 @@ if (xhr.status === 200) {
     console.error('Error:', xhr.statusText);
 }
 
-var url = '/snowdog/api.php?version';
+var url = '/snowdog/api/version';
 // Create a synchronous XMLHttpRequest object
 var xhr = new XMLHttpRequest();
 xhr.open('GET', url, false); // The third parameter (false) makes the request synchronous
+xhr.setRequestHeader('apikey', apiheader.apikey);
 xhr.send();
 
 // Check if the request was successful (status code 200)
@@ -135,7 +139,11 @@ function calculateOffline(timestamp) {
 }
 
 function checkColors() {
-    axios.get('/snowdog/api.php?geojson=1&api_key=1234')
+
+
+    axios.get('/snowdog/api/geojson',{
+        headers: apiheader
+      })
         .then(response => {
             // Handle the JSON data
             for (var i = 0; i < response.data.length; i++) {
@@ -167,7 +175,9 @@ function checkColors() {
             console.error('Axios error:', error);
         });
 
-    axios.get('/snowdog/api.php?lastonline=1&api_key=1234')
+    axios.get('/snowdog/api/lastonline',{
+        headers: apiheader
+      })
         .then(response => {
             //console.log(response);
             // Handle the JSON data
