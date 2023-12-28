@@ -28,10 +28,9 @@ from time import sleep
 import logging
 from threading import Thread, Event
 import queue
-import datetime
-from pynmeagps import NMEAReader
 import gitversion
 
+from nmea_redis_connection import NMEAStreamReader, RedisPublisher
 from mqtt_client import MqttClient
 from redis_client import RedisClient, RedisConsumer
 from mqtt_publisher import MQTTPublisher
@@ -47,114 +46,6 @@ handler = logging.StreamHandler()
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-G_TIME = None
-G_DATE = None
-
-MS_10 = 0.01
-MS_100 = 0.1
-MS_1000 = 1
-
-class NMEAStreamReader(Thread):
-    """
-    Thread class to read NMEA input
-
-    Args:
-        name (str): Name of thread
-        path (str): NMEA device path
-        data_que (Queue): Queue where data is stored for processing
-        shutdown_event (Event): Follow programs shutdown event
-    """
-    def __init__(self, name, path: str, data_que: queue.Queue):
-        super().__init__(name=name)
-        self.queue = data_que
-        self.path = path
-        self.running = True
-
-    def stop(self):
-        self.running = False
-        self.join()
-
-    def run(self):
-        logger.info("NMEAStreamReader starting")
-        data_to_process = ['GPGGA', 'GPVTG', 'GNGGA']
-
-        with open(self.path, 'rb') as stream:
-            nmr = NMEAReader(stream, nmeaonly=True)
-
-            for (raw_data, parsed_data) in nmr:
-                _ = (raw_data) # not used
-                try:
-                    if parsed_data.quality == 1:
-                        if parsed_data.identity in data_to_process:
-                            logger.debug(parsed_data)
-                            self.queue.put_nowait(parsed_data)
-                except NMEAReader.NMEAParseError:
-                    pass
-
-                if self.running is False:
-                    break
-
-        logger.info("NMEAStreamReader shutting down")
-
-def nmea_data_to_redis_format(raw_data):
-    """Format data from nmea stream to be compliance with Redis data structure"""
-    def format_ts(raw_ts):
-        ts_raw = f"{G_DATE} {raw_ts}"
-        return f"{datetime.datetime.strptime(ts_raw, '%Y-%m-%d %H:%M:%S').isoformat()}.000Z"
-
-    data = {}
-
-    try:
-        if raw_data.identity == 'GPVTG':
-            data['ts'] = format_ts(raw_data.time)
-            data['identity'] = raw_data.identity
-            data['speed'] = raw_data.sogk
-
-        if raw_data.identity == 'GPGGA' or raw_data.identity == 'GNGGA':
-            data['ts'] = format_ts(raw_data.time)
-            data['identity'] = raw_data.identity
-            data['lat'] = raw_data.lat
-            data['lon'] = raw_data.lon
-            data['alt'] = raw_data.alt
-    except KeyError as error:
-        data = None
-        logger.debug(error)
-
-    return data
-
-class RedisPublisher(Thread):
-    """
-    Thread class to publish data to Redis stream
-
-    Args:
-        name (str): Name of thread
-        client (RedisClient): Initialized client for Redis connection
-        data_que (Queue): queue where data is read
-        shutdown_event (Event): Follow programs shutdown event
-    """
-    def __init__(self, name, client: RedisClient, data_que: queue.Queue):
-        super().__init__(name=name)
-        self.client = client
-        self.queue = data_que
-        self.running = True
-
-    def stop(self):
-        self.running = False
-        self.join()
-
-    def run(self):
-        logger.info("RedisPublisher running")
-        while self.running:
-            if not self.queue.empty():
-                data = self.queue.get()
-                redis_data = nmea_data_to_redis_format(data)
-                self.queue.task_done()
-
-                if redis_data:
-                    self.client.add_message(redis_data)
-            sleep(MS_100)
-        logger.info("RedisPublisher shutting down")
-
 def main():
     """
     Main thread to handle producers, consumers and data formatting threads
@@ -167,11 +58,6 @@ def main():
     Returns:
         None
     """
-    # pylint: disable=global-statement
-    global G_TIME
-    global G_DATE
-    G_TIME = datetime.datetime.now()
-    G_DATE = datetime.date.today()
     shutdown_event = Event()
 
     logger.info("Starting Snowdog %s", gitversion.git_revision)
@@ -213,11 +99,13 @@ def main():
 
     nmeareader_thread = NMEAStreamReader('NMEAStreamReader',
                                          '/dev/EG25.NMEA',
-                                         io_queue)
+                                         io_queue,
+                                         logger)
 
     redis_publisher_thread = RedisPublisher('RedisPublisher',
                                             redis_client,
-                                            io_queue)
+                                            io_queue,
+                                            logger)
 
     mqtt_publisher_thread = MQTTPublisher('MQTTPublisher',
                                           mqtt_client,
@@ -245,10 +133,6 @@ def main():
 
     while not shutdown_event.is_set():
         try:
-            # Update time in main thread so no need to get that on every thread
-            G_TIME = datetime.datetime.now()
-            G_DATE = datetime.date.today()
-
             for thread in threadslist:
                 if not thread.is_alive():
                     logger.critical("%s is not running", thread.name)
