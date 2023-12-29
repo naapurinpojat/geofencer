@@ -1,7 +1,7 @@
 <?php
 
 class headerKeys {
-    const APIKEY = 'apikey';
+    const APIKEY = 'Authorization';
 }
 
 /**

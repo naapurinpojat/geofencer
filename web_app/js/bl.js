@@ -5,7 +5,7 @@ var geojsonobjects = [];
 geojsonobjects.polygons = [];
 geojsonobjects.markers = [];
 const apiheader = {
-    'apikey': '0028b076-ca97-44c5-9603-bdfc38e2718e',
+    'Authorization': '0028b076-ca97-44c5-9603-bdfc38e2718e',
 };
 
 var url = '/snowdog/map.geojson';
@@ -99,7 +99,7 @@ function calculateColor(timestamp) {
     // Calculate the RGB values based on the colorValue
     const green = Math.round(255 * (1 - colorValue));
     const red = Math.round(255 * colorValue);
-    const blue = 0; // Blue component is set to 0
+    const blue = 255; // Blue component is set to 0
 
     // Return the color value as an RGB string
     return `rgb(${red}, ${green}, ${blue})`;
