@@ -162,15 +162,6 @@ function lastOnline($obj, $request) {
 
     }
 
-    $result = queryHelper('SELECT * FROM route_percentage order by drive_date DESC LIMIT 1;');
-    if ($result->num_rows > 0) {
-        while ($row = $result->fetch_assoc()) {
-            $json['driven'] = $row['drive_date'];
-        }
-    } else {
-
-    }
-
     header('Content-Type: application/json');
     echo json_encode($json);
 }
@@ -200,7 +191,6 @@ function snowdogAPI(){
     $api->registerPathHandler('location', 'POST', 'saveLocation');
     $api->registerPathHandler('geojson', 'GET', 'getGeoJSON');
     $api->registerPathHandler('lastonline', 'GET', 'lastOnline');
-    $api->registerPathHandler('lastdriven', 'GET', 'lastDriven');
     $api->runPathHandlers();
 }
 

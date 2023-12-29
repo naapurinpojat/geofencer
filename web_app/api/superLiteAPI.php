@@ -80,7 +80,7 @@ class superLiteAPI {
         $this->path = array_slice(explode('/', $_SERVER['REQUEST_URI']), 3);
         $this->method = $_SERVER['REQUEST_METHOD'];
         if ($this->method === 'POST') {
-
+            
             // Check if the "Content-Type" header is set
             if (isset($_SERVER['CONTENT_TYPE'])) {
                 $contentType = $_SERVER['CONTENT_TYPE'];
@@ -89,12 +89,15 @@ class superLiteAPI {
                     case 'application/json':
                     case 'application/octet-stream':
                         $rawData = file_get_contents('php://input');
+                        
                         if (substr($rawData, 0, 2) === "\x1f\x8b") {
                             // Data is Gzip-encoded, decode it
                              $parsedData = json_decode(gzdecode($rawData), true);
+                             
                         }
                         else {
-                            $parsedData = json_decode($jsonData, true);
+                            $parsedData = json_decode($rawData, true);
+                            
                         }
                         break;
                     
