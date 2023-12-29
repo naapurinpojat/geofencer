@@ -12,26 +12,24 @@ body,
 
 .text-label {
     position: absolute;
-    top: 10px;
-    left: 10px;
+    top: 5px;
+    left: 5px;
     background-color: rgb(187, 187, 187);
-    padding: 5px;
+    padding: 1px;
     font-weight: normal;
     border: 1px solid #8a8a8a;
     border-radius: 50%;
-    visibility: hidden;
 }
 
 .text-label_infence {
     position: absolute;
-    top: 10px;
-    left: 10px;
+    top: 5px;
+    left: 5px;
     background-color: rgb(0, 158, 21);
-    padding: 5px;
+    padding: 1px;
     font-weight: normal;
     border: 1px solid #008612;
     border-radius: 50%;
-    visibility: hidden;
 }
 
 .overlay-text {
