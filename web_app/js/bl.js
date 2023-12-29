@@ -17,7 +17,7 @@ xhr.send();
 // Check if the request was successful (status code 200)
 if (xhr.status === 200) {
     // Log or do something with the response text
-    //console.log(xhr.responseText);
+//console.log(xhr.responseText);
     geojsonFeature = JSON.parse(xhr.responseText);
 } else {
     // Handle errors
@@ -28,13 +28,13 @@ var url = '/snowdog/api/version';
 // Create a synchronous XMLHttpRequest object
 var xhr = new XMLHttpRequest();
 xhr.open('GET', url, false); // The third parameter (false) makes the request synchronous
-xhr.setRequestHeader('apikey', apiheader.apikey);
+    xhr.setRequestHeader('apikey', apiheader.apikey);
 xhr.send();
 
 // Check if the request was successful (status code 200)
 if (xhr.status === 200) {
     // Log or do something with the response text
-    console.log(xhr.responseText);
+console.log(xhr.responseText);
     appversion = JSON.parse(xhr.responseText);
 } else {
     // Handle errors
@@ -99,7 +99,7 @@ function calculateColor(timestamp) {
     // Calculate the RGB values based on the colorValue
     const green = Math.round(255 * (1 - colorValue));
     const red = Math.round(255 * colorValue);
-    const blue = 255; // Blue component is set to 0
+    const blue = 0; // Blue component is set to 0
 
     // Return the color value as an RGB string
     return `rgb(${red}, ${green}, ${blue})`;
@@ -179,7 +179,6 @@ function checkColors() {
         headers: apiheader
       })
         .then(response => {
-            console.log(response);
             // Handle the JSON data
             const dateObject = new Date(response.data.online);
             var updatestring = 'Snowdog Tracker ' + appversion.version + '<br><i class="iconoir-antenna-signal"></i>' + calculateOffline(dateObject.getTime());
