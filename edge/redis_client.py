@@ -1,6 +1,37 @@
-"""Module providing Redis connection handlers"""
+"""
+Redis Client Module
+
+This module provides a RedisClient class for establishing and managing
+a connection to a Redis server.
+
+Usage:
+1. Create an instance of the RedisClient class.
+2. Perform Redis operations using methods like `add_message`, `read_messages`.
+3. Disconnect from the Redis server using the `close` method when done.
+
+Example:
+    # Create an instance of the RedisClient
+    redis_client = RedisClient()
+
+    # Disconnect from the Redis server
+    redis_client.close()
+
+Classes:
+- RedisClient: Main class for establishing and managing a connection to a Redis server.
+- RedisConsumer: Class used to consume data from redis streams
+
+Methods:
+- close: Disconnect from the Redis server.
+- read_messages: Retrieve the value associated with a key.
+- add_message: Set the value associated with a key.
+
+Dependencies:
+- redis: Required for interacting with the Redis server.
+
+Note: Make sure to install the required dependencies before using this module.
+"""
+
 from threading import Event
-from time import sleep
 import datetime
 import redis
 
@@ -42,6 +73,7 @@ class RedisClient:
 
 class RedisConsumer:
     """Store redis stream consumer group details"""
+    # pylint: disable=too-many-arguments, too-few-public-methods
     def __init__(self,
                  client: RedisClient,
                  topic: str,
@@ -56,8 +88,7 @@ class RedisConsumer:
 
         try:
             self.client.redis.xgroup_create(self.topic, self.consumer_group, id=0, mkstream=True)
-        except redis.ResponseError as e:
-            print(e)
+        except redis.ResponseError as redis_error:
             self.logger.debug("Consumer group most likely already existing")
 
     def read_messages(self, count=1):

@@ -108,6 +108,7 @@ class MQTTPublisher(Thread):
                     else:
                         raise
             except Exception as error:
+                _ = (error) # unused variable
                 self.logger.critical("MQTT connection failed. Trying manual reconnect")
                 self.client.disconnect()
                 utils.sleep_ms(10 * 1000)

@@ -26,7 +26,7 @@ SOFTWARE.
 
 from time import sleep
 import logging
-from threading import Thread, Event
+from threading import Event
 import queue
 import gitversion
 
@@ -61,20 +61,15 @@ def main():
     shutdown_event = Event()
 
     logger.info("Starting Snowdog %s", gitversion.git_revision)
-    redis_consumer_name_mqtt = "redis_iot"
-    redis_consumer_group_mqtt = "redis_iot_group"
-    redis_consumer_name_rest = "redis_rest"
-    redis_consumer_group_rest = "redis_rest_group"
     redis_topic = "snowdog:location"
 
-    mqtt_client_name = None
     mqtt_topic = f"telemetry/{secrets.MY_TENANT}/{secrets.MY_DEVICE}"
 
     io_queue = queue.Queue(maxsize=100)
 
     mqtt_client = MqttClient(secrets.HTTP_ADAPTER_IP,
                               secrets.MQTT_PORT,
-                              mqtt_client_name,
+                              None,
                               f"{secrets.MY_DEVICE}@{secrets.MY_TENANT}",
                               secrets.MY_PWD,
                               ssl_file=secrets.CERT_FILE,
@@ -87,14 +82,14 @@ def main():
 
     redis_mqtt_consumer = RedisConsumer(redis_client,
                                         redis_topic,
-                                        redis_consumer_group_mqtt,
-                                        redis_consumer_name_mqtt,
+                                        "redis_iot_group",
+                                        "redis_iot",
                                         logger=logger)
 
     redis_rest_consumer = RedisConsumer(redis_client,
                                         redis_topic,
-                                        redis_consumer_group_rest,
-                                        redis_consumer_name_rest,
+                                        "redis_rest_group",
+                                        "redis_rest",
                                         logger=logger)
 
     nmeareader_thread = NMEAStreamReader('NMEAStreamReader',

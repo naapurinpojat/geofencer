@@ -27,7 +27,7 @@ class MqttClient:
 
         self.client = pahomqtt.Client(self.client_id, protocol=pahomqtt.MQTTv5)
 
-        if int(os.getenv("VIRTUAL_SNOWDOG", 0)) == 0:
+        if int(os.getenv("VIRTUAL_SNOWDOG", '0')) == 0:
             if ssl_file:
                 self.context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
                 self.context.load_verify_locations(ssl_file)
