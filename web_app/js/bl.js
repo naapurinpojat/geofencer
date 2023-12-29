@@ -4,6 +4,7 @@ var geojsonFeature;
 var geojsonobjects = [];
 geojsonobjects.polygons = [];
 geojsonobjects.markers = [];
+const headerkeyword = 'Authorization';
 const apiheader = {
     'Authorization': '0028b076-ca97-44c5-9603-bdfc38e2718e',
 };
@@ -28,7 +29,7 @@ var url = '/snowdog/api/version';
 // Create a synchronous XMLHttpRequest object
 var xhr = new XMLHttpRequest();
 xhr.open('GET', url, false); // The third parameter (false) makes the request synchronous
-    xhr.setRequestHeader('apikey', apiheader.apikey);
+xhr.setRequestHeader(headerkeyword, apiheader.Authorization);
 xhr.send();
 
 // Check if the request was successful (status code 200)
