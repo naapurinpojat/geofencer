@@ -7,6 +7,6 @@ nohup redis-server --bind 0.0.0.0 &
 . /home/snowdog/venv/bin/activate
 
 curl http://juhaviitanen.com/snowdog/map.geojson > /home/snowdog/map.geojson
-nohup python /home/snowdog/nmea_testdata/emulate.py > /dev/null &
+nohup python /home/snowdog/nmea_testdata/emulator.py "/home/snowdog/nmea_testdata/snowdog-1.gpx" &
 python /home/snowdog/snowdog.py
 #ps|grep "python /home/snowdog/snowdog.py" > "snowdog-thread.info"

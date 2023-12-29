@@ -30,7 +30,7 @@ class Utils:
     # this conversion losts nanosecond accuracy
     def nanos_to_millis(nanos: int) -> int:
         """convert nanoseconds to milliseconds (int)"""
-        return int(nanos / 1000)
+        return int(nanos / 1000000)
 
     def nanos_to_seconds(nanos: int) -> float:
         """convert nanoseconds to seconds"""

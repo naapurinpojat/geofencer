@@ -44,12 +44,19 @@ services:
   
   mqtt-broker:
     image: eclipse-mosquitto
+    container_name: snowdog-mqtt-broker
     ports:
-    - "8883:8883"
+    - "1883:1883"
+    - "9001:9001"
+    volumes:
+      - ./snowdog-mqtt-broker/config:/mosquitto/config:rw
+      - ./snowdog-mqtt-broker/data:/mosquitto/data:rw
+      - ./snowdog-mqtt-broker/log:/mosquitto/log:rw
     networks:
       - mynetwork
 
   nmea-simulator:
+    container_name: virtual-snowdog
     build:
       context: .
       dockerfile: Dockerfile.snowdog_simulator
@@ -57,6 +64,11 @@ services:
       - mqtt-broker
     networks:
       - mynetwork
+# volumes for mapping data,config and log
+volumes:
+  config:
+  data:
+  log:
 
 networks:
   mynetwork:

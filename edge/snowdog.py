@@ -122,12 +122,12 @@ def main():
 
     nmeareader_thread.start()
     redis_publisher_thread.start()
-    #mqtt_publisher_thread.start()
+    mqtt_publisher_thread.start()
     rest_publisher_thread.start()
 
     threadslist = [nmeareader_thread,
                    redis_publisher_thread,
-                   #mqtt_publisher_thread,
+                   mqtt_publisher_thread,
                    rest_publisher_thread
                    ]
 

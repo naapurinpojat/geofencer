@@ -1,5 +1,18 @@
+from datetime import datetime
+import sys
+import gpxpy
 import serial
 import time
+import logging
+
+root = logging.getLogger()
+root.setLevel(logging.DEBUG)
+
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+root.addHandler(handler)
 
 # Define the NMEA logs
 nmea_logs = [
@@ -64,16 +77,57 @@ nmea_logs = [
 "$GPGGA,124459,6010.1872,N,02345.7485,E,1,08,0.9,545.4,M,46.9,M,,*4D"
 ]
 
+def gpx_to_nmea(point):
+    # Extract relevant data from GPX point
+    latitude = point.latitude
+    longitude = point.longitude
+    elevation = point.elevation
+    time = datetime.now()
+
+    lat_deg = int(float(latitude))
+    lat_min = (float(latitude) - lat_deg) * 60
+
+    lon_deg = int(float(longitude))
+    lon_min = (float(longitude) - lon_deg) * 60
+
+    # Format data into NMEA sentence
+    nmea_sentence = f"$GPGGA,{time:%H%M%S},{lat_deg:02d}{lat_min:.2f},N,{'' if lat_deg >= 0 else '-'}{lon_deg:03d}{lon_min:.2f},E,1,08,0.9,{elevation:.2f},M,46.9,M,,*"
+    checksum = 0
+    for char in nmea_sentence[1:]:
+        checksum ^= ord(char)
+    nmea_sentence += f"{checksum:02X}"
+
+    return nmea_sentence
+
 # Emulated serial port configuration
 serial_port = serial.Serial('/dev/EG27.NMEA', baudrate=38400, timeout=1)
 
 try:
-    # Write NMEA logs to the emulated serial port
-    for log in nmea_logs:
-        serial_port.write(log.encode())
-        serial_port.flush()
-        time.sleep(1)
+    logging.info(len(sys.argv))
+    logging.info(sys.argv)
+    if len(sys.argv) > 1:
+        gpx = None
+        with open(sys.argv[1], 'r') as file:
+            gpx = gpxpy.parse(file)
+            for track in gpx.tracks:
+                for segment in track.segments:
+                    logging.debug(f"Points before reduce {len(segment.points)}")
+                    segment.reduce_points(2.5)
+                    logging.debug(f"Points after reduce {len(segment.points)}")
+                    for point in segment.points:
+                        nmea_sentence = gpx_to_nmea(point)
+                        logging.info(nmea_sentence)
+                        serial_port.write(nmea_sentence.encode())
+                        serial_port.flush()
+                        time.sleep(1)
+    else:
+        # Write NMEA logs to the emulated serial port
+        for log in nmea_logs:
+            serial_port.write(log.encode())
+            serial_port.flush()
+            time.sleep(1)
 
 finally:
+    logging.info("exit emulator")
     # Close the emulated serial port
     serial_port.close()

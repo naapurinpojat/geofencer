@@ -1,4 +1,5 @@
 """Module providing MQTT client functionalities"""
+import os
 import ssl
 import paho.mqtt.client as pahomqtt
 
@@ -26,13 +27,14 @@ class MqttClient:
 
         self.client = pahomqtt.Client(self.client_id, protocol=pahomqtt.MQTTv5)
 
-        if ssl_file:
-            self.context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-            self.context.load_verify_locations(ssl_file)
-            self.client.tls_set_context(self.context)
+        if int(os.getenv("VIRTUAL_SNOWDOG", 0)) == 0:
+            if ssl_file:
+                self.context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+                self.context.load_verify_locations(ssl_file)
+                self.client.tls_set_context(self.context)
 
-        if username and password:
-            self.client.username_pw_set(username, password)
+            if username and password:
+                self.client.username_pw_set(username, password)
 
         self.client.on_connect = self.on_connect
         self.client.on_disconnect = self.on_disconnect

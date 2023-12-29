@@ -1,3 +1,4 @@
+import os
 import queue
 from threading import Thread
 import datetime
@@ -8,6 +9,14 @@ import serial
 
 from utils import Utils as utils
 from redis_client import RedisClient
+
+def process_data(queue, data, logger):
+    data_to_process = ['GPGGA', 'GPVTG']
+    logger.debug(data)
+    if data.quality == 1:
+        if data.identity in data_to_process:
+            logger.debug(data)
+            queue.put_nowait(data)
 
 
 class NMEAStreamReader(Thread):
@@ -27,16 +36,13 @@ class NMEAStreamReader(Thread):
         self.logger = logger
         self.running = True
 
+
     def stop(self):
         self.running = False
         self.join()
 
-    def run(self):
-
-        self.logger.info("NMEAStreamReader starting")
-        data_to_process = ['GPGGA', 'GPVTG']
-
-        with serial.Serial("/dev/EG25.NMEA", 38400, timeout=0.1) as stream:
+    def nmea_handler_virt(self):
+        with serial.Serial(self.path, 38400, timeout=0.1) as stream:
             while True:
                 nmr = NMEAReader(stream, nmeaonly=False)
 
@@ -45,20 +51,42 @@ class NMEAStreamReader(Thread):
                     try:
                         parsed_data = nmr.parse(line, validate=2)
                         try:
-                            if parsed_data.quality == 1:
-                                if parsed_data.identity in data_to_process:
-                                    self.logger.debug(parsed_data)
-                                    self.queue.put_nowait(parsed_data)
+                            process_data(self.queue, parsed_data, self.logger)
                         except Exception as e:
+                            self.logger.warning(e)
                             pass
                     except Exception as e:
+                        self.logger.warning(e)
                         pass
 
-                    #if self.running is False:
-                    #    break
-                #else:
-                #    print("Something else")
-                time.sleep(1)
+                if self.running is False:
+                    break
+                
+                utils.sleep_ms(100)
+
+    def nmea_handler(self):
+        with open(self.path, 'rb') as stream:
+            nmr = NMEAReader(stream, nmeaonly=True)
+            for (raw_data, parsed_data) in nmr:
+                _ = (raw_data) # not used
+                try:
+                    process_data(self.queue, parsed_data, self.logger)
+                except NMEAReader.NMEAParseError:
+                    pass
+
+                if self.running is False:
+                    break
+
+    def run(self):
+
+        self.logger.info("NMEAStreamReader starting")
+
+        if int(os.getenv("VIRTUAL_SNOWDOG", 0)) == 1:
+            self.logger.info("NMEAStreamReader running in virtual env")
+            self.nmea_handler_virt()
+        else:
+            self.logger.debug("NMEAStreamReader running in hardware")
+            self.nmea_handler()
 
         self.logger.info("NMEAStreamReader shutting down")
 
