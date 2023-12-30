@@ -1,5 +1,4 @@
 var map = L.map('map').setView([62.7708962631589, 22.79477884392867], 13);
-var globalData;
 var geojsonFeature;
 var geojsonobjects = [];
 geojsonobjects.polygons = [];
@@ -18,16 +17,16 @@ xhr.send();
 // Check if the request was successful (status code 200)
 if (xhr.status === 200) {
     // Log or do something with the response text
-//console.log(xhr.responseText);
+    //console.log(xhr.responseText);
     geojsonFeature = JSON.parse(xhr.responseText);
 } else {
     // Handle errors
     console.error('Error:', xhr.statusText);
 }
 
-var url = '/snowdog/api/version';
+url = '/snowdog/api/version';
 // Create a synchronous XMLHttpRequest object
-var xhr = new XMLHttpRequest();
+xhr = new XMLHttpRequest();
 xhr.open('GET', url, false); // The third parameter (false) makes the request synchronous
 xhr.setRequestHeader(headerkeyword, apiheader.Authorization);
 xhr.send();
@@ -35,8 +34,8 @@ xhr.send();
 // Check if the request was successful (status code 200)
 if (xhr.status === 200) {
     // Log or do something with the response text
-console.log(xhr.responseText);
-    appversion = JSON.parse(xhr.responseText);
+    console.log(xhr.responseText);
+    var appversion = JSON.parse(xhr.responseText);
 } else {
     // Handle errors
     console.error('Error:', xhr.statusText);
@@ -86,13 +85,13 @@ for (var i = 0; i < geojsonFeature.features.length; i++) {
 //console.log(geojsonobjects);
 
 
-function calculateColor(timestamp) {
+function calculateColor(timestamp, transitiondays = 3) {
     // Calculate the time difference in milliseconds
     const currentTime = new Date().getTime();
     const timeDifference = currentTime - timestamp;
 
     // Maximum time for a full transition to red (24 * 3 (3 days) hours in milliseconds)
-    const maxTimeForFullRed = 24 * 3 * 60 * 60 * 1000;
+    const maxTimeForFullRed = 24 * transitiondays * 60 * 60 * 1000;
 
     // Calculate the color value between red and green based on time
     let colorValue = Math.min(1, timeDifference / maxTimeForFullRed);
@@ -140,17 +139,15 @@ function calculateOffline(timestamp) {
 }
 
 function checkColors() {
-
-
-    axios.get('/snowdog/api/geojson',{
+    axios.get('/snowdog/api/geojson', {
         headers: apiheader
-      })
+    })
         .then(response => {
             // Handle the JSON data
             for (var i = 0; i < response.data.length; i++) {
 
                 const dateObject = new Date(response.data[i].latest_ts);
-                const color = calculateColor(dateObject.getTime());
+                const color = calculateColor(dateObject.getTime(), 5);
 
                 try {
                     var updatestring = "Viimeksi käyty:<br>" + response.data[i].latest_ts;
@@ -176,9 +173,9 @@ function checkColors() {
             console.error('Axios error:', error);
         });
 
-    axios.get('/snowdog/api/lastonline',{
+    axios.get('/snowdog/api/lastonline', {
         headers: apiheader
-      })
+    })
         .then(response => {
             // Handle the JSON data
             const dateObject = new Date(response.data.online);
