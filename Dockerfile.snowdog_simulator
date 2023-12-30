@@ -25,6 +25,9 @@ RUN chmod +x /home/snowdog/start_snowdog_docker.sh
 
 # Copy test data from host's home folder to the image
 COPY nmea_testdata /home/snowdog/nmea_testdata
+# Remove possibly existing secrets to replace it with docker specific
+RUN rm /home/snowdog/secrets.py
+COPY secrets_docker.py /home/snowdog/secrets.py
 
 ENV VIRTUAL_SNOWDOG=1
 
