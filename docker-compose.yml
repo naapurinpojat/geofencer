@@ -70,6 +70,16 @@ services:
     networks:
       - mynetwork
 
+  rpa-snowdog:
+    container_name: rpa-snowdog
+    build:
+      dockerfile: Dockerfile.rpa
+    depends_on:
+      - apache
+      - mysql
+    networks:
+      - mynetwork
+
 networks:
   mynetwork:
     driver: bridge

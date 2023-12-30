@@ -37,6 +37,10 @@ clean:
 	@rm -f $(GIT_VERSION_PY) $(PACKAGE_NAME) $(GIT_VERSION_PHP)
 	@echo "Cleanup complete"
 
+test:
+	@echo "Running tests..."
+	@./run_rpa_tests.sh
+
 # PHONY targets to avoid conflicts with file names
 .PHONY: all clean
 

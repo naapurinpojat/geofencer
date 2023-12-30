@@ -43,6 +43,12 @@ The Snowdog Geospatial Data Collection System stands as a comprehensive solution
 2. `docker-compose up -d --build`
 3. go to address http://localhost/snowdog/
 
+## Running tests
+```
+docker run --network=snowdog_mynetwork -it --rm -v $(pwd):/tests snowdog-rpa-snowdog bash -c "robot --outputdir /tests/results /tests"
+```
+
+# Map of the dog
 ![Screenshot](snowdog.png)
 
 # License
