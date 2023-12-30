@@ -1,0 +1,5 @@
+# Use an official PHP Apache image as the base image
+FROM php:8.3-apache
+
+# Install mysqli extension
+RUN docker-php-ext-install mysqli && a2enmod rewrite

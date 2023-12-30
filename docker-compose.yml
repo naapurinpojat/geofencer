@@ -16,8 +16,10 @@ services:
       - mynetwork
 
   apache:
-    image: php:8.3-apache
     container_name: apache-container
+    build:
+      context: .
+      dockerfile: Dockerfile.apache
     volumes:
       - ./web_app:/var/www/html/snowdog
     environment:
@@ -62,6 +64,7 @@ services:
       dockerfile: Dockerfile.snowdog_simulator
     depends_on:
       - mqtt-broker
+      - apache
     networks:
       - mynetwork
 # volumes for mapping data,config and log
