@@ -39,8 +39,8 @@ A one-page map, powered by Leafletjs, is utilized to present a heatmap of the ro
 The Snowdog Geospatial Data Collection System stands as a comprehensive solution for users seeking to collect and visualize geospatial data using geofences. This system seamlessly integrates cutting-edge technologies, providing a reliable and user-friendly experience for mountainbikers for observing winter trail condition.
 
 # Running the service
-1. make all
-2. docker-compose up -d --build
+1. `make all`
+2. `docker-compose up -d --build`
 3. go to address http://localhost/snowdog/
 
 ![Screenshot](snowdog.png)
