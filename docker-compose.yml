@@ -72,8 +72,10 @@ services:
 
   rpa-snowdog:
     container_name: rpa-snowdog
+    restart: "no"
     build:
       dockerfile: Dockerfile.rpa
+
     depends_on:
       - apache
       - mysql

@@ -1,2 +1,3 @@
 FROM python:3
+ENV SERVER_ADDR=apache-container
 RUN pip install robotframework && pip install robotframework-requests

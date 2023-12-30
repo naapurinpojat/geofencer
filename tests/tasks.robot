@@ -3,13 +3,26 @@ Library    RequestsLibrary
 Library    String
 Library    DateTime
 Library    Collections
+Library    OperatingSystem
+
+Test Setup
 
 *** Variables ***
 ${ROBOT_RUN_ID}     1234
-${BASE_URL}         http://apache-container/snowdog
+${BASE_URL}         http://localhost/snowdog
 &{CUSTOM_HEADER}    Authorization=0028b076-ca97-44c5-9603-bdfc38e2718e    Content-Type=application/json
 
+*** Keywords ***
+Setup Test
+    Environment Variable Should Be Set    SERVER_ADDR
+    ${value}=    Get Environment Variable    SERVER_ADDR
+    Set Global Variable     ${BASE_URL}    http://${value}/snowdog
+    # Implement any setup steps here
+
 *** Test Cases ***
+Setup the test environment
+    Run Keyword And Ignore Error    Setup Test
+
 Generate Random ROBOT_RUN_ID ID for POST data
     ${rnd} =	Generate Random String	5-10	# Generates a string 5 to 10 characters long
     Set Global Variable    ${ROBOT_RUN_ID}    ${rnd}
