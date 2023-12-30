@@ -9,3 +9,5 @@ web_app/gitversion.php
 *.log
 *.info
 venv/
+snowdog-mqtt-broker/data/
+snowdog-mqtt-broker/log/
