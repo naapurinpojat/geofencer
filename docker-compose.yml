@@ -69,11 +69,6 @@ services:
       - apache
     networks:
       - mynetwork
-# volumes for mapping data,config and log
-volumes:
-  config:
-  data:
-  log:
 
 networks:
   mynetwork:
