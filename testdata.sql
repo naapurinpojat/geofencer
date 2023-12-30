@@ -1,3 +1,4 @@
+CREATE DATABASE IF NOT EXISTS juhavdph_snowdog;
 USE juhavdph_snowdog;
 
 CREATE TABLE `location_history` (

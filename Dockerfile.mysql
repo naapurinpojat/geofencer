@@ -1,0 +1,11 @@
+# Use an official MySQL image as the base image
+FROM mysql:latest
+
+# Copy the SQL script to initialize the database with test data
+COPY testdata.sql /docker-entrypoint-initdb.d/
+
+# Expose the MySQL port
+EXPOSE 3306
+
+# CMD instruction to start MySQL server
+CMD ["mysqld"]
