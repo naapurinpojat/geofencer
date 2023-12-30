@@ -17,8 +17,6 @@ RUN apk add --no-cache socat redis \
     && pip install --upgrade pip \
     && pip install pyserial gpxpy \
     && pip install -r /home/snowdog/requirements.txt
-# Create a directory for the application
-WORKDIR /home/snowdog/nmea_testdata
 
 # Make the start script executable
 RUN chmod +x /home/snowdog/start_snowdog_docker.sh
@@ -30,6 +28,8 @@ RUN rm /home/snowdog/secrets.py
 COPY secrets_docker.py /home/snowdog/secrets.py
 
 ENV VIRTUAL_SNOWDOG=1
+
+WORKDIR /home/snowdog
 
 #CMD ["cat", "-la", "home/snowdog/"]
 
