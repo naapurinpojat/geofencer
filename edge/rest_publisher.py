@@ -83,7 +83,11 @@ class RestPublisher(Thread):
                 if current_point and self.should_send(last_sent_pos, current_point, time_delta):
                     try:
                         payload = self.build_message_json(current_point)
-                        response = requests.post(self.api_url, data=payload)
+                        headers = {
+                            'Content-Type': 'application/json',
+                            'Authorization': self.api_key
+                        }
+                        response = requests.post(self.api_url, data=payload, headers=headers)
 
                         if response.status_code == 200:
                             last_sent_pos = current_point
@@ -100,7 +104,6 @@ class RestPublisher(Thread):
     def build_message_json(self, location) -> str:
         """Format data to rest API compatible json str"""
         data = location.copy()
-        data['api_key'] = self.api_key
         data['in_area'] = ""
         in_area_data = self.fences.in_area(data)
         if in_area_data:
