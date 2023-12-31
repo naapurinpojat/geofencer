@@ -3,11 +3,14 @@ FROM alpine:latest
 
 RUN adduser -D -h /home/snowdog snowdog
 
-# Copy the target zip file from the host to the image
-COPY snowdog.tgz .
+WORKDIR /build
+COPY ./edge /build/
+RUN apk add alpine-sdk && cd /build/ && \
+    make && mv ../snowdog.tgz /home/snowdog/ && \
+    apk del alpine-sdk
 
 # Extract the zip file
-RUN tar -xzf snowdog.tgz -C /home/snowdog/
+RUN cd /home/snowdog && tar -xzf snowdog.tgz -C /home/snowdog/ && rm -rf /build
 
 # Install required packages
 RUN apk add --no-cache socat redis \
