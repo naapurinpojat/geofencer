@@ -119,7 +119,8 @@ class MQTTPublisher(Thread):
 
                 if time_delta >= sleep_between_retry:
                     last_connection_check = utils.get_time()
-                    self.logger.critical(f"MQTT client not connected, trying to reconnect (every {sleep_between_retry} s)")
+                    self.logger.critical(f"MQTT client not connected, trying to reconnect (every \
+                                         {sleep_between_retry} s)")
                     self.client.keep_connected()
 
             utils.sleep_ms(self.period)

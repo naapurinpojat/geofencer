@@ -95,7 +95,8 @@ class MqttClient:
 
                 if time_delta > connection_timeout_s:
                     raise ConnectionError("Timeout, couldn't connect MQTT broker")
-                self.logger.critical(f"Trying to connect, but MQTT broker not available {connection_error}")
+                self.logger.critical(f"Trying to connect, but MQTT broker not available \
+                                     {connection_error}")
 
                 utils.sleep_ms(1000)
 
