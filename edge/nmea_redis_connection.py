@@ -55,6 +55,7 @@ if int(os.getenv("VIRTUAL_SNOWDOG", '0')) == 1:
 
 def process_data(que, data, logger):
     """Check NMEA data quality and put it to queue for RedisPublisher"""
+    _ = (logger) # unused
     data_to_process = ['GPGGA', 'GPVTG']
     #logger.debug(data)
     if data.quality == 1:

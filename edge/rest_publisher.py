@@ -79,7 +79,9 @@ class RestPublisher(Thread):
         while not self.shutdown:
             api_available = False
             try:
-                available_query = requests.get(f"{self.api_url}/version", headers=headers, timeout=10)
+                available_query = requests.get(f"{self.api_url}/version",
+                                               headers=headers,
+                                               timeout=10)
                 if available_query.status_code == 200:
                     #self.logger.debug("Web API available")
                     api_available = True
@@ -89,13 +91,11 @@ class RestPublisher(Thread):
                     self.logger.critical(f"Web API not available ({available_query.status_code})")
 
                 if api_available:
-                    """
-                    This relies on NMEA device update rate of 1 second
-                    If connection to API is lost we don't consume data from Redis and when API is
-                    again available we will go through Redis stream in chunks of 10 messages
-                    sending only one of those to REST API to keep 10 seconds update period for
-                    web service
-                    """
+                    # This relies on NMEA device update rate of 1 second
+                    # If connection to API is lost we don't consume data from Redis and when API is
+                    # again available we will go through Redis stream in chunks of 10 messages
+                    # sending only one of those to REST API to keep 10 seconds update period for
+                    # web service
                     data = self.redis.read_messages(10, int(self.period/2))
                     current_time = utils.get_time()
                     time_delta = utils.timedelta_seconds(last_sent_pos.get('ts_epoch', 0),

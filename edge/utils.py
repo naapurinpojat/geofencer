@@ -11,6 +11,8 @@ from math import radians, sin, cos, sqrt, atan2
 
 class Utils:
     """Utils to calculate time and distances"""
+    # pylint: disable=no-method-argument
+
     def millis_to_nanos(millis: int) -> int:
         """convert milliseconds to nanoseconds"""
         return millis * 1000
@@ -53,6 +55,7 @@ class Utils:
         Returns:
         Distance in meters.
         """
+        # pylint: disable=invalid-name
         # Radius of the Earth in meters
         earth_radius = 6371000.0
 
@@ -75,6 +78,7 @@ class Utils:
 
 class Fences:
     """Class to handle geofencing"""
+    # pylint: disable=too-few-public-methods
     def __init__(self, filepath):
         fences = None
         self.areas = {}

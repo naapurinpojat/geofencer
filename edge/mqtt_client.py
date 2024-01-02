@@ -81,8 +81,8 @@ class MqttClient:
         return self.connected
 
     def connect(self):
-        connection_timeout_s = 60 * 5 # 5 minutes
         """method to connect client to broker"""
+        connection_timeout_s = 60 * 5 # 5 minutes
         time_beginning = utils.get_time()
         while not self.connected:
             try:
@@ -94,7 +94,7 @@ class MqttClient:
                 self.logger.debug(f"Have tried to connect for {time_delta} seconds")
 
                 if time_delta > connection_timeout_s:
-                    raise ConnectionError("Timeout, couldn't connect MQTT broker")
+                    raise ConnectionError("Timeout, couldn't connect MQTT broker") from connection_error
                 self.logger.critical(f"Trying to connect, but MQTT broker not available \
                                      {connection_error}")
 

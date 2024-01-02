@@ -21,10 +21,11 @@ jobs:
 
       - name: Install dependencies
         run: |
+          make edge
           python -m pip install --upgrade pip
           pip install pylint
           pip install -r edge/requirements.txt
 
       - name: Run Pylint
         run: |
-          pylint edge/*.py
+          pylint --rcfile=pylintrc edge/*.py
