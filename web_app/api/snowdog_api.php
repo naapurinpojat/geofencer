@@ -3,7 +3,8 @@ require_once '../config.php';
 require_once '../gitversion.php';
 require_once 'superLiteAPI.php';
 
-class Location {
+class Location
+{
     public $lat;
     public $lon;
     public $alt;
@@ -15,12 +16,13 @@ class Location {
     private $sql;
 
 
-    function __construct($lat, $lon, $alt, $speed, $ts, $in_area) {
+    function __construct($lat, $lon, $alt, $speed, $ts, $in_area)
+    {
         $utcDateTime = new DateTime($ts, new DateTimeZone('UTC'));
         // Set the Helsinki time zone for conversion
         $helsinkiTimeZone = new DateTimeZone('Europe/Helsinki');
         $utcDateTime->setTimezone($helsinkiTimeZone);
-        
+
         // Format the local time
         $formattedTs = $utcDateTime->format('Y-m-d H:i:s');
 
@@ -28,18 +30,20 @@ class Location {
         $this->lon = $lon;
         $this->alt = $alt;
         $this->speed = $speed;
-        $this->ts = $formattedTs;//$conn->real_escape_string($ts);
+        $this->ts = $formattedTs; //$conn->real_escape_string($ts);
         $this->in_area = $in_area;
         $this->valid = TRUE;
     }
 
-    function getSQLclause() {
+    function getSQLclause()
+    {
         $this->sql = "INSERT INTO location_history (lat, lon, alt, speed, ts, in_area) VALUES ($this->lat, $this->lon, $this->alt, $this->speed, '$this->ts', '$this->in_area')";
         return $this->sql;
     }
 
-    function storeLocation() {
-        if($this->valid == TRUE) {
+    function storeLocation()
+    {
+        if ($this->valid == TRUE) {
             $conn = new mysqli(SERVER_NAME, USERNAME, PASSWORD, DBNAME);
             if ($conn->connect_error) {
                 die("Connection failed: " . $conn->connect_error);
@@ -53,7 +57,7 @@ class Location {
             $this->in_area = $conn->real_escape_string($this->in_area);
 
             $sql = "INSERT INTO location_history (lat, lon, alt, speed, ts, in_area) VALUES ($this->lat, $this->lon, $this->alt, $this->speed, '$this->ts', '$this->in_area')";
-             // Execute the query
+            // Execute the query
             $conn->query($sql);
             $rows = $conn->affected_rows;
             // Close the connection
@@ -67,7 +71,8 @@ class Location {
  * This function is used to execute a query and return the result
  
  */
-function queryHelper($sql) {
+function queryHelper($sql)
+{
     $conn = new mysqli(SERVER_NAME, USERNAME, PASSWORD, DBNAME);
     $result = $conn->query($sql);
     $conn->close();
@@ -78,7 +83,8 @@ function queryHelper($sql) {
 /**
  * This function returns the version of the API
  */
-function getVersion($obj, $request) {
+function getVersion($obj, $request)
+{
     header('Content-Type: application/json');
     echo json_encode(array('version' => GIT_REVISION));
 }
@@ -86,8 +92,9 @@ function getVersion($obj, $request) {
 /**
  * This function saves the location of the user
  */
-function saveLocation($obj, $api) {
-    if(isset($api->request['lat']) && isset($api->request['lon']) && isset($api->request['alt']) && isset($api->request['speed']) && isset($api->request['ts']) && isset($api->request['in_area'])) {
+function saveLocation($obj, $api)
+{
+    if (isset($api->request['lat']) && isset($api->request['lon']) && isset($api->request['alt']) && isset($api->request['speed']) && isset($api->request['ts']) && isset($api->request['in_area'])) {
         $location = new Location(
             $api->request['lat'],
             $api->request['lon'],
@@ -96,18 +103,16 @@ function saveLocation($obj, $api) {
             $api->request['ts'],
             $api->request['in_area']
         );
-        if($location->storeLocation() != 0) {
+        if ($location->storeLocation() != 0) {
             echo json_encode(array('status' => 'Ok'));
-        }
-        else {
+        } else {
             echo json_encode(array('status' => 'Error'));
         }
-    }
-    else {
-        if($api->request != null) {
+    } else {
+        if ($api->request != null) {
             $locations = array();
-            foreach($api->request as $req) {
-                if(isset($req['lat']) && isset($req['lon']) && isset($req['alt']) && isset($req['speed']) && isset($req['ts']) && isset($req['in_area'])) {
+            foreach ($api->request as $req) {
+                if (isset($req['lat']) && isset($req['lon']) && isset($req['alt']) && isset($req['speed']) && isset($req['ts']) && isset($req['in_area'])) {
                     $location = new Location(
                         $req['lat'],
                         $req['lon'],
@@ -119,10 +124,10 @@ function saveLocation($obj, $api) {
                     array_push($locations, $location);
                 }
             }
-            if(count($locations) > 0) {
+            if (count($locations) > 0) {
                 $conn = $api->connectDB();
                 $rows = 0;
-                foreach($locations as $location) {
+                foreach ($locations as $location) {
                     $result = $conn->query($location->getSQLclause());
                     $rows += $conn->affected_rows;
                 }
@@ -133,7 +138,8 @@ function saveLocation($obj, $api) {
     }
 }
 
-function getGeoJSON($obj, $request) {
+function getGeoJSON($obj, $request)
+{
     $result = queryHelper('SELECT DISTINCT in_area, MAX(ts) AS latest_ts FROM location_history GROUP BY in_area;');
 
     if ($result->num_rows > 0) {
@@ -142,7 +148,6 @@ function getGeoJSON($obj, $request) {
         while ($row = $result->fetch_assoc()) {
             array_push($json, array('in_area' => $row['in_area'], 'latest_ts' => $row['latest_ts']));
         }
-
     } else {
         echo "{}";
     }
@@ -151,22 +156,23 @@ function getGeoJSON($obj, $request) {
     echo json_encode($json);
 }
 
-function lastOnline($obj, $request) {
+function lastOnline($obj, $request)
+{
     $json = [];
     $result = queryHelper('SELECT max(ts) as ts FROM `location_history`');
     if ($result->num_rows > 0) {
         while ($row = $result->fetch_assoc()) {
-           $json['online'] = $row['ts'];
+            $json['online'] = $row['ts'];
         }
     } else {
-
     }
 
     header('Content-Type: application/json');
     echo json_encode($json);
 }
 
-function lastDriven($obj, $request) {
+function lastDriven($obj, $request)
+{
     $result = queryHelper('SELECT * FROM route_percentage order by drive_date DESC LIMIT 1;');
     if ($result->num_rows > 0) {
         $json = [];
@@ -174,7 +180,6 @@ function lastDriven($obj, $request) {
             $json['driven'] = $row['drive_date'];
         }
     } else {
-
     }
 
     header('Content-Type: application/json');
@@ -184,7 +189,8 @@ function lastDriven($obj, $request) {
 /**
  * This function registers all the path handlers for the API 
  */
-function snowdogAPI(){
+function snowdogAPI()
+{
     $api = new superLiteAPI(APIKEY);
     $api->registerPathHandler('version', 'GET', 'getVersion');
     $api->registerPathHandler('version/ui', 'GET', 'getVersion');
@@ -193,5 +199,3 @@ function snowdogAPI(){
     $api->registerPathHandler('lastonline', 'GET', 'lastOnline');
     $api->runPathHandlers();
 }
-
-?>

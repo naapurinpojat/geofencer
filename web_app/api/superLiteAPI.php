@@ -1,6 +1,7 @@
 <?php
 
-class headerKeys {
+class headerKeys
+{
     const APIKEY = 'Authorization';
 }
 
@@ -8,23 +9,27 @@ class headerKeys {
  * This class is used to register path handlers for the API
  
  */
-class PathHandler{
+class PathHandler
+{
     public $path;
     public $method;
     public $handler;
 
-    public function __construct($path, $method, $handler) {
+    public function __construct($path, $method, $handler)
+    {
         $this->path = $path;
         $this->method = $method;
         $this->handler = $handler;
     }
-    public function requestCallback(superLiteAPI $api) {
+    public function requestCallback(superLiteAPI $api)
+    {
         call_user_func($this->handler, $this, $api);
     }
 }
 
 
-class superLiteAPI {
+class superLiteAPI
+{
     private $pathHandlers = array();
     private $path = null;
     private $method = null;
@@ -32,7 +37,8 @@ class superLiteAPI {
     private $apikey = null;
     public $request = null;
 
-    public function connectDB() {
+    public function connectDB()
+    {
         $conn = new mysqli(SERVER_NAME, USERNAME, PASSWORD, DBNAME);
         if ($conn->connect_error) {
             die("Connection failed: " . $conn->connect_error);
@@ -40,38 +46,42 @@ class superLiteAPI {
         return $conn;
     }
 
-    public function closeDB($conn) {
+    public function closeDB($conn)
+    {
         $conn->close();
     }
 
-    public function queryDB($conn, $sql) {
+    public function queryDB($conn, $sql)
+    {
         $result = $conn->query($sql);
         return $result;
     }
 
-    public function prepareSQL($sql) {
+    public function prepareSQL($sql)
+    {
         $conn = $this->connectDB();
         $result = $this->queryDB($conn, $sql);
         $this->closeDB($conn);
         return $result;
     }
 
-    private function checkAPIKEY() {
-        if(isset($this->headers[headerKeys::APIKEY]) && ($this->headers[headerKeys::APIKEY] === $this->apikey)) {
+    private function checkAPIKEY()
+    {
+        if (isset($this->headers[headerKeys::APIKEY]) && ($this->headers[headerKeys::APIKEY] === $this->apikey)) {
             return true;
-        }
-        else {
+        } else {
             return false;
         }
     }
     /**
      * This function is used to initialize the API
      */
-    public function __construct($apikey) {
+    public function __construct($apikey)
+    {
         $this->headers = getallheaders();
-        if(isset($apikey)) {
+        if (isset($apikey)) {
             $this->apikey = $apikey;
-            if(!$this->checkAPIKEY()) {
+            if (!$this->checkAPIKEY()) {
                 http_response_code(401); // Unauthorized
                 echo json_encode(array('status' => 'Unauthorized'));
                 exit();
@@ -80,7 +90,7 @@ class superLiteAPI {
         $this->path = array_slice(explode('/', $_SERVER['REQUEST_URI']), 3);
         $this->method = $_SERVER['REQUEST_METHOD'];
         if ($this->method === 'POST') {
-            
+
             // Check if the "Content-Type" header is set
             if (isset($_SERVER['CONTENT_TYPE'])) {
                 $contentType = $_SERVER['CONTENT_TYPE'];
@@ -89,22 +99,19 @@ class superLiteAPI {
                     case 'application/json':
                     case 'application/octet-stream':
                         $rawData = file_get_contents('php://input');
-                        
+
                         if (substr($rawData, 0, 2) === "\x1f\x8b") {
                             // Data is Gzip-encoded, decode it
-                             $parsedData = json_decode(gzdecode($rawData), true);
-                             
-                        }
-                        else {
+                            $parsedData = json_decode(gzdecode($rawData), true);
+                        } else {
                             $parsedData = json_decode($rawData, true);
-                            
                         }
                         break;
-                    
+
                     case 'application/x-www-form-urlencoded':
                         $parsedData = $_POST;
                         break;
-                   
+
                     default:
                         $parsedData = null;
                         break;
@@ -113,11 +120,9 @@ class superLiteAPI {
             } else {
                 $this->request = null;
             }
-        } 
-        elseif ($this->method === 'GET') {
+        } elseif ($this->method === 'GET') {
             $this->request = $_GET;
-        }
-        else {
+        } else {
             $this->request = null;
         }
     }
@@ -125,18 +130,20 @@ class superLiteAPI {
     /**
      * This function is used to register a path handler
      */
-    public function registerPathHandler($path, $method, $handler) {
+    public function registerPathHandler($path, $method, $handler)
+    {
         array_push($this->pathHandlers, new PathHandler($path, $method, $handler));
     }
 
     /**
      * This function is used to run all the registered path handlers
      */
-    public function runPathHandlers() {
-        foreach($this->pathHandlers as $handler) {
+    public function runPathHandlers()
+    {
+        foreach ($this->pathHandlers as $handler) {
             $pathstr = implode("/", $this->path);
-            if($handler->path === $pathstr && $handler->method == $this->method) {
-                 $handler->requestCallback($this);
+            if ($handler->path === $pathstr && $handler->method == $this->method) {
+                $handler->requestCallback($this);
             }
         }
     }
@@ -144,8 +151,8 @@ class superLiteAPI {
     /**
      * This function is used to print all the registered path handlers
      */
-    public function printHandlers() {
+    public function printHandlers()
+    {
         print_r($this->pathHandlers);
     }
 }
- ?>
