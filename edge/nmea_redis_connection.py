@@ -44,6 +44,7 @@ import queue
 from threading import Thread
 import datetime
 from pynmeagps import NMEAReader
+from pynmeagps import exceptions as nmea_exceptions
 
 from utils import Utils as utils
 from redis_client import RedisClient
@@ -109,7 +110,7 @@ class NMEAStreamReader(Thread):
                 _ = (raw_data) # not used
                 try:
                     process_data(self.queue, parsed_data, self.logger)
-                except NMEAReader.NMEAParseError:
+                except nmea_exceptions.NMEAParseError:
                     pass
 
                 if self.running is False:

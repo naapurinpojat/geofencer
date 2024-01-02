@@ -79,7 +79,7 @@ class RestPublisher(Thread):
         while not self.shutdown:
             api_available = False
             try:
-                available_query = requests.get(f"{self.api_url}/version", headers=headers)
+                available_query = requests.get(f"{self.api_url}/version", headers=headers, timeout=10)
                 if available_query.status_code == 200:
                     #self.logger.debug("Web API available")
                     api_available = True
@@ -117,7 +117,8 @@ class RestPublisher(Thread):
                                 payload = self.build_message_json(current_point)
                                 response = requests.post(f"{self.api_url}/location",
                                                          data=payload,
-                                                         headers=headers)
+                                                         headers=headers,
+                                                         timeout=10)
 
                                 if response.status_code == 200:
                                     last_sent_pos = current_point
