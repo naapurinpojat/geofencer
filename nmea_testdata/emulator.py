@@ -99,35 +99,79 @@ def gpx_to_nmea(point):
 
     return nmea_sentence
 
-# Emulated serial port configuration
-serial_port = serial.Serial('/dev/EG27.NMEA', baudrate=38400, timeout=1)
+def main(args):
+    # Emulated serial port configuration
+    serial_port = serial.Serial('/dev/EG27.NMEA', baudrate=38400, timeout=1)
 
-try:
-    logging.info(len(sys.argv))
-    logging.info(sys.argv)
-    if len(sys.argv) > 1:
-        gpx = None
-        with open(sys.argv[1], 'r') as file:
-            gpx = gpxpy.parse(file)
-            for track in gpx.tracks:
-                for segment in track.segments:
-                    logging.debug(f"Points before reduce {len(segment.points)}")
-                    segment.reduce_points(2.5)
-                    logging.debug(f"Points after reduce {len(segment.points)}")
-                    for point in segment.points:
-                        nmea_sentence = gpx_to_nmea(point)
-                        logging.info(nmea_sentence)
-                        serial_port.write(nmea_sentence.encode())
-                        serial_port.flush()
-                        time.sleep(1)
-    else:
-        # Write NMEA logs to the emulated serial port
-        for log in nmea_logs:
-            serial_port.write(log.encode())
-            serial_port.flush()
-            time.sleep(1)
+    try:
+        logging.info(len(args))
+        logging.info(args)
 
-finally:
-    logging.info("exit emulator")
-    # Close the emulated serial port
-    serial_port.close()
+        if len(args) > 1:
+            with open(args[1], 'r') as file:
+                delay_test = False
+                if len(args) == 3 and args[2] == "delay_test":
+                    delay_test = True
+                    logging.info("Running Delay test")
+                    
+                gpx = gpxpy.parse(file)
+                while True:
+                    for track in gpx.tracks:
+                        track_copy = track.clone()
+                        for segment in track_copy.segments:
+                            logging.debug(f"Points before reduce {len(segment.points)}")
+                            segment.reduce_points(2.5)
+                            logging.info(f"Points after reduce {len(segment.points)}")
+                            for i, point in enumerate(segment.points):
+                                nmea_sentence = gpx_to_nmea(point)
+                                logging.debug(nmea_sentence)
+                                serial_port.write(nmea_sentence.encode())
+                                serial_port.flush()
+
+                                if delay_test:
+                                    if i == 50:
+                                        logging.info("Sleep for 4 minutes (no NMEA updates in such period)")
+                                        time.sleep(4 * 60)
+                                    if i == 100:
+                                        logging.info("Same point for 10 minutes")
+                                        time_start = int(time.time_ns() / 1000000000)
+                                        time_end = time_start
+
+                                        while (time_end - time_start) < (10 * 60):
+                                            nmea_sentence = gpx_to_nmea(point)
+                                            logging.debug(nmea_sentence)
+                                            serial_port.write(nmea_sentence.encode())
+                                            serial_port.flush()
+
+                                            time.sleep(1)
+                                            time_end = int(time.time_ns() / 1000000000)
+                                    if i == 200:
+                                        logging.info("Same point for 60 minutes")
+                                        time_start = int(time.time_ns() / 1000000000)
+                                        time_end = time_start
+
+                                        while (time_end - time_start) < (60 * 60):
+
+                                            nmea_sentence = gpx_to_nmea(point)
+                                            logging.debug(nmea_sentence)
+                                            serial_port.write(nmea_sentence.encode())
+                                            serial_port.flush()
+
+                                            time.sleep(1)
+                                            time_end = int(time.time_ns() / 1000000000)
+                                
+                                time.sleep(1)
+        else:
+            # Write NMEA logs to the emulated serial port
+            for log in nmea_logs:
+                serial_port.write(log.encode())
+                serial_port.flush()
+                time.sleep(1)
+
+    finally:
+        logging.info("exit emulator")
+        # Close the emulated serial port
+        serial_port.close()
+
+if __name__ == "__main__":
+    main(sys.argv)

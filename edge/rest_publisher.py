@@ -62,6 +62,11 @@ class RestPublisher(Thread):
         self.logger.info("Starting REST publisher")
         last_sent_pos = {}
 
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': self.api_key
+        }
+
         # clear redis consumer buffer from old junk
         # todo: push this to some api endpoint for debugging purposes?
         junk_read = 1000
@@ -72,33 +77,65 @@ class RestPublisher(Thread):
             utils.sleep_ms(self.period)
 
         while not self.shutdown:
-            current_time = utils.get_time()
-            data = self.redis.read_messages()
-            time_delta = utils.timedelta_seconds(last_sent_pos.get('ts', 0), current_time)
+            api_available = False
+            try:
+                available_query = requests.get(f"{self.api_url}/version", headers=headers)
+                if available_query.status_code == 200:
+                    #self.logger.debug("Web API available")
+                    api_available = True
+                else:
+                    # If server is completely out of order, previous call will
+                    # throw an exception that is caught later (ConnectionError)
+                    self.logger.critical(f"Web API not available ({available_query.status_code})")
 
-            if time_delta >= self.update_rate_seconds:
-                current_point = None
-                if len(data) > 0:
-                    current_point = points_from_redis(data[0])
-                if current_point and self.should_send(last_sent_pos, current_point, time_delta):
-                    try:
-                        payload = self.build_message_json(current_point)
-                        headers = {
-                            'Content-Type': 'application/json',
-                            'Authorization': self.api_key
-                        }
-                        response = requests.post(self.api_url, data=payload, headers=headers)
+                if api_available:
+                    """
+                    This relies on NMEA device update rate of 1 second
+                    If connection to API is lost we don't consume data from Redis and when API is
+                    again available we will go through Redis stream in chunks of 10 messages
+                    sending only one of those to REST API to keep 10 seconds update period for
+                    web service
+                    """
+                    data = self.redis.read_messages(10, int(self.period/2))
+                    current_time = utils.get_time()
+                    time_delta = utils.timedelta_seconds(last_sent_pos.get('ts_epoch', 0),
+                                                         current_time)
 
-                        if response.status_code == 200:
-                            last_sent_pos = current_point
-                            last_sent_pos['ts'] = current_time # overwrite ts with nanos
-
+                    if time_delta >= self.update_rate_seconds or len(data) >= 5:
+                        current_point = None
+                        if len(data) > 0:
+                            current_point = points_from_redis(data[-1])
                         else:
-                            self.logger.warning("API Response: %s", response.status_code)
+                            if last_sent_pos.get('ts_epoch'):
+                                current_point = last_sent_pos.copy()
+                                current_point.pop('ts_epoch')
 
-                    except Exception as error:
-                        self.logger.warning("Error connecting to API: %s", error)
-            utils.sleep_ms(self.period)
+                        if current_point and self.should_send(last_sent_pos,
+                                                              current_point,
+                                                              time_delta):
+                            try:
+                                payload = self.build_message_json(current_point)
+                                response = requests.post(f"{self.api_url}/location",
+                                                         data=payload,
+                                                         headers=headers)
+
+                                if response.status_code == 200:
+                                    last_sent_pos = current_point
+                                    last_sent_pos['ts_epoch'] = current_time
+
+                                else:
+                                    self.logger.warning("API Response: %s", response.status_code)
+
+                            except Exception as error:
+                                self.logger.warning("Error connecting to API: %s", error)
+            except requests.exceptions.ConnectionError as connection_error:
+                self.logger.warning(f"API not available \n {connection_error}")
+
+            if api_available:
+                utils.sleep_ms(self.period)
+            else:
+                # No intention to bully API with extra traffic if version not available
+                utils.sleep_ms(self.period * 10)
         self.logger.info("Rest publisher shutting down")
 
     def build_message_json(self, location) -> str:

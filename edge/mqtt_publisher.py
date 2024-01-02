@@ -73,46 +73,54 @@ class MQTTPublisher(Thread):
     def run(self):
         self.logger.info("MQTTPublisher starting")
         last_connection_check = utils.get_time()
+        retry_timeouts = {"under_10": 1, "from_10_to_50": 5, "over_50": 10}
+        connection_check_timeout = retry_timeouts.get("under_10")
 
-        self.client.connect()
+        try:
+            self.client.connect()
+        except ConnectionError as conn_error:
+            self.logger.critical("Couldn't connect to MQTT broker")
+            self.logger.critical(conn_error)
 
         while not self.shutdown:
-            try:
-                if self.client.is_connected():
+            time_delta = utils.timedelta_seconds(last_connection_check, utils.get_time())
+            if self.client.is_connected():
+                self.logger.debug("mqtt client connected")
+                last_connection_check = utils.get_time()
+                messages = self.redis_client.read_messages(count=100, block=(int(self.period/2)))
+
+                self.logger.debug(f"Messages read from redis (mqtt consumer) {len(messages)}")
+
+                ts_buffer = []
+
+                for redis_data in messages:
+                    topic, data = iot_ticket_formatter(redis_data)
+                    if topic == 'location':
+                        ts_buffer.append(data)
+
+                if len(ts_buffer) > 0:
+                    ts_json = json.dumps({'t_set': ts_buffer}, ensure_ascii=False)
+
+                    try:
+                        mqtt_message_info = self.client.publish(self.mqtt_topic, ts_json)
+                        mqtt_message_info.wait_for_publish(timeout=10)
+                    except RuntimeError as rterr:
+                        self.logger.warning("Data not published %d", mqtt_message_info.rc)
+                        self.logger.critical(rterr)
+
+            else:
+                retries = self.client.connection_retries
+                if retries < 10:
+                    connection_check_timeout = retry_timeouts.get("under_10")
+                elif retries >= 10 and retries <= 50:
+                    connection_check_timeout = retry_timeouts.get("from_10_to_50")
+                else:
+                    connection_check_timeout = retry_timeouts.get("over_50")
+
+                if time_delta >= connection_check_timeout:
                     last_connection_check = utils.get_time()
-                    messages = self.redis_client.read_messages()
-
-                    ts_buffer = []
-
-                    for redis_data in messages:
-                        topic, data = iot_ticket_formatter(redis_data)
-                        if topic == 'location':
-                            ts_buffer.append(data)
-
-                    if len(ts_buffer) > 0:
-                        ts_json = json.dumps({'t_set': ts_buffer}, ensure_ascii=False)
-
-                        try:
-                            mqtt_message_info = self.client.publish(self.mqtt_topic, ts_json)
-                            if not mqtt_message_info.is_published():
-                                self.logger.warning("Data not published %d", mqtt_message_info.rc)
-                        except RuntimeError as rterr:
-                            self.logger.critical(rterr)
-
-                elif utils.timedelta_seconds(last_connection_check, utils.get_time()) >= 10:
-                    last_connection_check = utils.get_time()
-                    self.logger.critical("MQTT client not connected, trying to reconnect")
-
-                    if self.client.get_connection_retries() < 10:
-                        self.client.keep_connected()
-                    else:
-                        raise
-            except Exception as error:
-                _ = (error) # unused variable
-                self.logger.critical("MQTT connection failed. Trying manual reconnect")
-                self.client.disconnect()
-                utils.sleep_ms(10 * 1000)
-                self.client.connect()
+                    self.logger.critical(f"MQTT client not connected, trying to reconnect (every {connection_check_timeout} s)")
+                    self.client.keep_connected()
 
             utils.sleep_ms(self.period)
 

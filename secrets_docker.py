@@ -8,4 +8,4 @@ CERT_FILE=""
 TELEMETRY_ID="gpslatlonalt"
 
 API_KEY="0028b076-ca97-44c5-9603-bdfc38e2718e"
-WEB_API="http://apache-container:80/snowdog/api/location"
+WEB_API="http://apache-container:80/snowdog/api"

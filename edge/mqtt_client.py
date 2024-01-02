@@ -1,5 +1,6 @@
 """Module providing MQTT client functionalities"""
 import os
+import socket
 import ssl
 import paho.mqtt.client as pahomqtt
 
@@ -39,6 +40,8 @@ class MqttClient:
         self.client.on_connect = self.on_connect
         self.client.on_disconnect = self.on_disconnect
 
+        self.connected = False
+
     def on_connect(self, client, userdata, flags, result_code, properties):
         """on_connect callback"""
         # pylint: disable=too-many-arguments
@@ -46,6 +49,7 @@ class MqttClient:
         if result_code == 0:
             self.logger.info(f'Connected to MQTT broker {self.broker_address}:{self.broker_port}')
             self.connection_retries = 0
+            self.connected = True
         else:
             self.logger \
                 .critical(f"Failed to connect to the MQTT broker with result code {result_code}")
@@ -55,38 +59,45 @@ class MqttClient:
     def on_disconnect(self, client, userdata, result_code, properties):
         """on_disconnect callback"""
         _ = (client, userdata, properties) # unused
+        self.connected = False
+
         if result_code != 0:
             self.logger.warning(f'Disconnected suddenly from MQTT broker ({result_code})')
         else:
             self.logger.info("Disconnected from MQTT broker succesfully")
-        self.client.loop_stop()
+            self.client.loop_stop()
 
     def keep_connected(self):
         """"method to keep client connected"""
-        if not self.client.is_connected():
+        if not self.is_connected():
             self.connection_retries += 1
-            self.client.reconnect()
+            try:
+                self.client.reconnect()
+            except socket.gaierror as connection_error:
+                self.logger.critical(f"MQTT broker not available {connection_error}")
 
     def is_connected(self):
         """method to check is client connected"""
-        return self.client.is_connected()
+        return self.connected
 
     def connect(self):
+        connection_timeout_s = 60 * 5 # 5 minutes
         """method to connect client to broker"""
-        try:
-            time_beginning = utils.get_time()
-            self.client.connect(self.broker_address, self.broker_port)
-            self.client.loop_start()
+        time_beginning = utils.get_time()
+        while not self.connected:
+            try:
+                self.client.connect(self.broker_address, self.broker_port)
+                self.client.loop_start()
 
-            while not self.is_connected():
-                utils.sleep_ms(100)
+            except socket.gaierror as connection_error:
+                time_delta = utils.timedelta_seconds(time_beginning)
+                self.logger.debug(f"Have tried to connect for {time_delta} seconds")
 
-                if utils.timedelta_seconds(time_beginning, utils.get_time()) > 10:
+                if time_delta > connection_timeout_s:
                     raise ConnectionError("Timeout, couldn't connect MQTT broker")
+                self.logger.critical(f"Trying to connect, but MQTT broker not available {connection_error}")
 
-        except Exception as error:
-            _ = (error) # unused variable
-            raise
+                utils.sleep_ms(1000)
 
     def disconnect(self):
         """method to disconnect client"""

@@ -64,9 +64,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.snowdog_simulator
-    depends_on:
-      - mqtt-broker
-      - apache
     networks:
       - mynetwork
 
@@ -74,6 +71,7 @@ services:
     container_name: rpa-snowdog
     restart: "no"
     build:
+      context: .
       dockerfile: Dockerfile.rpa
 
     depends_on:

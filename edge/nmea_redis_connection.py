@@ -49,16 +49,16 @@ from utils import Utils as utils
 from redis_client import RedisClient
 
 if int(os.getenv("VIRTUAL_SNOWDOG", '0')) == 1:
-    import serial
+    import serial # pylint: disable=import-error
 
 
 def process_data(que, data, logger):
     """Check NMEA data quality and put it to queue for RedisPublisher"""
     data_to_process = ['GPGGA', 'GPVTG']
-    logger.debug(data)
+    #logger.debug(data)
     if data.quality == 1:
         if data.identity in data_to_process:
-            logger.debug(data)
+            #logger.debug(data)
             que.put_nowait(data)
 
 

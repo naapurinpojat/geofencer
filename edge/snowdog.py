@@ -39,7 +39,7 @@ from rest_publisher import RestPublisher
 import secrets
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s',
                               datefmt='%Y-%m-%d %H:%M:%S')
 handler = logging.StreamHandler()

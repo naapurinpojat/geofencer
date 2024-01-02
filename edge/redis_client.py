@@ -88,20 +88,22 @@ class RedisConsumer:
 
         try:
             self.client.redis.xgroup_create(self.topic, self.consumer_group, id=0, mkstream=True)
-        except redis.ResponseError as redis_error:
+        except redis.ResponseError as redis_error: # pylint: disable=unused-variable
             self.logger.debug("Consumer group most likely already existing")
 
-    def read_messages(self, count=1):
+    def read_messages(self, count=1, block=None):
         """Read messages from stream that is part of topic"""
 
         messages_ret = []
         messages = self.client.redis.xreadgroup(self.consumer_group,
                                           self.consumer_name,
                                           {self.topic: '>'},
-                                          count=count)
+                                          count=count,
+                                          block=block)
         for mes in messages:
             for mes_id, mes_data in mes[1]:
                 messages_ret.append(mes_data)
                 self.client.redis.xack(mes[0], self.consumer_group, mes_id)
 
         return messages_ret
+    
