@@ -10,13 +10,17 @@ from redis_client import RedisConsumer
 from utils import Utils as utils
 from utils import Fences as fences
 
+
 def points_from_redis(redis_data) -> dict:
     """Convert data from redis stream to rest API compatible format"""
-    return {'lat': float(redis_data.get('lat')),
-            'lon': float(redis_data.get('lon')),
-            'alt': float(redis_data.get('alt')),
-            'speed': float(0),
-            'ts': redis_data.get('ts')}
+    return {
+        "lat": float(redis_data.get("lat")),
+        "lon": float(redis_data.get("lon")),
+        "alt": float(redis_data.get("alt")),
+        "speed": float(0),
+        "ts": redis_data.get("ts"),
+    }
+
 
 class RestPublisher(Thread):
     """
@@ -29,14 +33,17 @@ class RestPublisher(Thread):
         api_key (str): Authentication key
         shutdown_event (Event): Follow programs shutdown event
     """
-    def __init__(self,
-                 name:str,
-                 geojson_file:str,
-                 api_url:str,
-                 api_key:str,
-                 redis_consumer:RedisConsumer,
-                 period:int=100,
-                 logger=None):
+
+    def __init__(
+        self,
+        name: str,
+        geojson_file: str,
+        api_url: str,
+        api_key: str,
+        redis_consumer: RedisConsumer,
+        period: int = 100,
+        logger=None,
+    ):
         super().__init__(name=name)
         self.api_url = api_url
         self.api_key = api_key
@@ -52,7 +59,6 @@ class RestPublisher(Thread):
         self.update_rate_meters = 5
         self.update_rate_idle_minutes = 3
 
-
     def stop(self):
         """Stop thread"""
         self.shutdown = True
@@ -62,10 +68,7 @@ class RestPublisher(Thread):
         self.logger.info("Starting REST publisher")
 
         last_sent_pos = {}
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': self.api_key
-        }
+        headers = {"Content-Type": "application/json", "Authorization": self.api_key}
 
         # clear redis consumer buffer from old junk
         # todo: push this to some api endpoint for debugging purposes?
@@ -79,9 +82,9 @@ class RestPublisher(Thread):
             api_available = False
             data = []
             try:
-                available_query = requests.get(f"{self.api_url}/version",
-                                               headers=headers,
-                                               timeout=10)
+                available_query = requests.get(
+                    f"{self.api_url}/version", headers=headers, timeout=10
+                )
                 if available_query.status_code == 200:
                     self.logger.debug("Web API available")
                     api_available = True
@@ -98,29 +101,29 @@ class RestPublisher(Thread):
                     # web service
                     data = self.redis.read_messages(15, 100)
                     current_time = utils.get_time()
-                    time_delta = utils.timedelta_seconds(last_sent_pos.get('ts_epoch', 0),
-                                                         current_time)
+                    time_delta = utils.timedelta_seconds(
+                        last_sent_pos.get("ts_epoch", 0), current_time
+                    )
 
                     current_point = None
 
                     if len(data) > 0:
                         current_point = points_from_redis(data[-1])
                     else:
-                        if last_sent_pos.get('ts_epoch'):
+                        if last_sent_pos.get("ts_epoch"):
                             current_point = last_sent_pos.copy()
-                            current_point.pop('ts_epoch')
+                            current_point.pop("ts_epoch")
 
-                    if current_point and self.should_send(last_sent_pos,
-                                                            current_point,
-                                                            time_delta):
-
+                    if current_point and self.should_send(last_sent_pos, current_point, time_delta):
                         response_code = 0
                         try:
                             payload = self.build_message_json(current_point)
-                            response = requests.post(f"{self.api_url}/location",
-                                                        data=payload,
-                                                        headers=headers,
-                                                        timeout=10)
+                            response = requests.post(
+                                f"{self.api_url}/location",
+                                data=payload,
+                                headers=headers,
+                                timeout=10,
+                            )
 
                             response_code = response.status_code
                         except TypeError as json_error:
@@ -128,7 +131,7 @@ class RestPublisher(Thread):
 
                         if response_code == 200:
                             last_sent_pos = current_point
-                            last_sent_pos['ts_epoch'] = current_time
+                            last_sent_pos["ts_epoch"] = current_time
                         else:
                             self.logger.warning("API Response: %s", response_code)
             except requests.exceptions.RequestException as requests_error:
@@ -146,10 +149,10 @@ class RestPublisher(Thread):
     def build_message_json(self, location) -> str:
         """Format data to rest API compatible json str"""
         data = location.copy()
-        data['in_area'] = ""
+        data["in_area"] = ""
         in_area_data = self.fences.in_area(data)
         if in_area_data:
-            data['in_area'] = in_area_data
+            data["in_area"] = in_area_data
         self.logger.debug(json.dumps(data))
 
         return json.dumps(data)
@@ -162,13 +165,12 @@ class RestPublisher(Thread):
         point_xy = new_point.get("lat"), new_point.get("lon")
         last_sent_point = last_sent_pos.get("lat", 0), last_sent_pos.get("lon", 0)
 
-        distance_between = utils.haversine_distance_meters(point_xy,
-                                                    last_sent_point)
+        distance_between = utils.haversine_distance_meters(point_xy, last_sent_point)
 
         if distance_between >= self.update_rate_meters:
             return True
 
-        if  time_delta >= self.update_rate_idle_minutes * 60:
+        if time_delta >= self.update_rate_idle_minutes * 60:
             return True
 
         return False

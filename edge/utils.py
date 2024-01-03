@@ -9,8 +9,10 @@ from time import sleep
 from time import clock_gettime_ns
 from math import radians, sin, cos, sqrt, atan2
 
+
 class Utils:
     """Utils to calculate time and distances"""
+
     # pylint: disable=no-method-argument
 
     def millis_to_nanos(millis: int) -> int:
@@ -68,7 +70,7 @@ class Utils:
         dlon = lon2 - lon1
 
         # Haversine formula
-        a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
+        a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
         c = 2 * atan2(sqrt(a), sqrt(1 - a))
 
         # Distance in meters
@@ -76,8 +78,10 @@ class Utils:
 
         return distance
 
+
 class Fences:
     """Class to handle geofencing"""
+
     # pylint: disable=too-few-public-methods
     def __init__(self, filepath):
         fences = None
@@ -85,13 +89,13 @@ class Fences:
         with open(filepath, "r", encoding="utf-8") as geojson:
             fences = json.load(geojson)
         for i in fences.get("features"):
-            self.areas[i.get("properties").get("name")] = i.get("geometry").get('coordinates')[0]
-
+            self.areas[i.get("properties").get("name")] = i.get("geometry").get("coordinates")[0]
 
     def in_area(self, point):
         """
         Check if point (x,y) is in provided area (geojson containing multiple polygons)
         """
+
         def point_in_polygon(point_x, point_y, polygon):
             """
             Check if a point (x, y) is inside a polygon.
@@ -111,13 +115,15 @@ class Fences:
                 x_1, y_1 = polygon[i]
                 x_2, y_2 = polygon[(i + 1) % polygon_len]
 
-                if ((y_1 <= point_y < y_2) or (y_2 <= point_y < y_1)) and \
-                (point_x > (x_2 - x_1) * (point_y - y_1) / (y_2 - y_1) + x_1):
+                if ((y_1 <= point_y < y_2) or (y_2 <= point_y < y_1)) and (
+                    point_x > (x_2 - x_1) * (point_y - y_1) / (y_2 - y_1) + x_1
+                ):
                     inside = not inside
 
             return inside
+
         for area_key, area_value in self.areas.items():
-            if point_in_polygon(point.get('lon'), point.get('lat'), area_value):
+            if point_in_polygon(point.get("lon"), point.get("lat"), area_value):
                 return area_key
 
         return None

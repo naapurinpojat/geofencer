@@ -45,7 +45,7 @@ services:
       - mynetwork
     depends_on:
       - mysql
-  
+
   mqtt-broker:
     image: eclipse-mosquitto
     container_name: snowdog-mqtt-broker

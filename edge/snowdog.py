@@ -40,11 +40,13 @@ import secrets
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s',
-                              datefmt='%Y-%m-%d %H:%M:%S')
+formatter = logging.Formatter(
+    "%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+)
 handler = logging.StreamHandler()
 handler.setFormatter(formatter)
 logger.addHandler(handler)
+
 
 def main():
     """
@@ -67,65 +69,55 @@ def main():
 
     io_queue = queue.Queue(maxsize=100)
 
-    mqtt_client = MqttClient(secrets.HTTP_ADAPTER_IP,
-                              secrets.MQTT_PORT,
-                              None,
-                              f"{secrets.MY_DEVICE}@{secrets.MY_TENANT}",
-                              secrets.MY_PWD,
-                              ssl_file=secrets.CERT_FILE,
-                              logger=logger)
+    mqtt_client = MqttClient(
+        secrets.HTTP_ADAPTER_IP,
+        secrets.MQTT_PORT,
+        None,
+        f"{secrets.MY_DEVICE}@{secrets.MY_TENANT}",
+        secrets.MY_PWD,
+        ssl_file=secrets.CERT_FILE,
+        logger=logger,
+    )
 
-    redis_client = RedisClient('localhost',
-                               6379,
-                               redis_topic,
-                               logger=logger)
+    redis_client = RedisClient("localhost", 6379, redis_topic, logger=logger)
 
-    redis_mqtt_consumer = RedisConsumer(redis_client,
-                                        redis_topic,
-                                        "redis_iot_group",
-                                        "redis_iot",
-                                        logger=logger)
+    redis_mqtt_consumer = RedisConsumer(
+        redis_client, redis_topic, "redis_iot_group", "redis_iot", logger=logger
+    )
 
-    redis_rest_consumer = RedisConsumer(redis_client,
-                                        redis_topic,
-                                        "redis_rest_group",
-                                        "redis_rest",
-                                        logger=logger)
+    redis_rest_consumer = RedisConsumer(
+        redis_client, redis_topic, "redis_rest_group", "redis_rest", logger=logger
+    )
 
-    nmeareader_thread = NMEAStreamReader('NMEAStreamReader',
-                                         '/dev/EG25.NMEA',
-                                         io_queue,
-                                         logger)
+    nmeareader_thread = NMEAStreamReader("NMEAStreamReader", "/dev/EG25.NMEA", io_queue, logger)
 
-    redis_publisher_thread = RedisPublisher('RedisPublisher',
-                                            redis_client,
-                                            io_queue,
-                                            logger)
+    redis_publisher_thread = RedisPublisher("RedisPublisher", redis_client, io_queue, logger)
 
-    mqtt_publisher_thread = MQTTPublisher('MQTTPublisher',
-                                          mqtt_client,
-                                          mqtt_topic,
-                                          redis_mqtt_consumer,
-                                          logger=logger)
+    mqtt_publisher_thread = MQTTPublisher(
+        "MQTTPublisher", mqtt_client, mqtt_topic, redis_mqtt_consumer, logger=logger
+    )
 
-    rest_publisher_thread = RestPublisher('RestPublisher',
-                                          '/home/snowdog/map.geojson',
-                                          secrets.WEB_API,
-                                          secrets.API_KEY,
-                                          redis_rest_consumer,
-                                          period=(10 * 1000),
-                                          logger=logger)
+    rest_publisher_thread = RestPublisher(
+        "RestPublisher",
+        "/home/snowdog/map.geojson",
+        secrets.WEB_API,
+        secrets.API_KEY,
+        redis_rest_consumer,
+        period=(10 * 1000),
+        logger=logger,
+    )
 
     nmeareader_thread.start()
     redis_publisher_thread.start()
     mqtt_publisher_thread.start()
     rest_publisher_thread.start()
 
-    threadslist = [nmeareader_thread,
-                   redis_publisher_thread,
-                   mqtt_publisher_thread,
-                   rest_publisher_thread
-                   ]
+    threadslist = [
+        nmeareader_thread,
+        redis_publisher_thread,
+        mqtt_publisher_thread,
+        rest_publisher_thread,
+    ]
 
     while not shutdown_event.is_set():
         try:

@@ -69,7 +69,7 @@ class Location
 
 /**
  * This function is used to execute a query and return the result
- 
+
  */
 function queryHelper($sql)
 {
@@ -187,7 +187,7 @@ function lastDriven($obj, $request)
 }
 
 /**
- * This function registers all the path handlers for the API 
+ * This function registers all the path handlers for the API
  */
 function snowdogAPI()
 {

@@ -7,7 +7,7 @@ class headerKeys
 
 /**
  * This class is used to register path handlers for the API
- 
+
  */
 class PathHandler
 {
