@@ -215,7 +215,7 @@ logging-modules=logging
 [FORMAT]
 
 # Expected format of line ending, e.g. empty (any line ending), LF or CRLF.
-expected-line-ending-format=
+expected-line-ending-format=LF
 
 # Regexp for a line that is allowed to be longer than the limit.
 ignore-long-lines=^\s*(# )?<?https?://\S+>?$
@@ -566,5 +566,5 @@ min-public-methods=2
 
 # Exceptions that will emit a warning when being caught. Defaults to
 # "BaseException, Exception".
-overgeneral-exceptions=BaseException,
-                       Exception
+overgeneral-exceptions=builtins.BaseException,
+                       builtins.Exception

@@ -28,4 +28,4 @@ jobs:
 
       - name: Run Pylint
         run: |
-          pylint --rcfile=pylintrc edge/*.py
+          pylint --rcfile=.pylintrc edge/*.py
