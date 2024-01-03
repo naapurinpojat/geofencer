@@ -362,4 +362,3 @@ ALTER TABLE `location_history`
 ALTER TABLE `location_history`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=338;
 COMMIT;
-

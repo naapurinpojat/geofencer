@@ -6,19 +6,23 @@ import paho.mqtt.client as pahomqtt
 
 from utils import Utils as utils
 
+
 class MqttClient:
     """
     Class to handle MQTT client connections
     """
+
     # pylint: disable=too-many-arguments
-    def __init__(self,
-                 broker_address,
-                 broker_port,
-                 client_id,
-                 username=None,
-                 password=None,
-                 ssl_file=None,
-                 logger=None):
+    def __init__(
+        self,
+        broker_address,
+        broker_port,
+        client_id,
+        username=None,
+        password=None,
+        ssl_file=None,
+        logger=None,
+    ):
         self.logger = logger
         self.broker_address = broker_address
         self.broker_port = broker_port
@@ -28,7 +32,7 @@ class MqttClient:
 
         self.client = pahomqtt.Client(self.client_id, protocol=pahomqtt.MQTTv5)
 
-        if int(os.getenv("VIRTUAL_SNOWDOG", '0')) == 0:
+        if int(os.getenv("VIRTUAL_SNOWDOG", "0")) == 0:
             if ssl_file:
                 self.context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
                 self.context.load_verify_locations(ssl_file)
@@ -45,30 +49,30 @@ class MqttClient:
     def on_connect(self, client, userdata, flags, result_code, properties):
         """on_connect callback"""
         # pylint: disable=too-many-arguments
-        _ = (client, userdata, flags, properties) # unused
+        _ = (client, userdata, flags, properties)  # unused
         if result_code == 0:
-            self.logger.info(f'Connected to MQTT broker {self.broker_address}:{self.broker_port}')
+            self.logger.info(f"Connected to MQTT broker {self.broker_address}:{self.broker_port}")
             self.connection_retries = 0
             self.connected = True
         else:
-            self.logger \
-                .critical(f"Failed to connect to the MQTT broker with result code {result_code}")
+            self.logger.critical(
+                f"Failed to connect to the MQTT broker with result code {result_code}"
+            )
             raise Exception(f"Connection failed with result code {result_code}")
-
 
     def on_disconnect(self, client, userdata, result_code, properties):
         """on_disconnect callback"""
-        _ = (client, userdata, properties) # unused
+        _ = (client, userdata, properties)  # unused
         self.connected = False
 
         if result_code != 0:
-            self.logger.warning(f'Disconnected suddenly from MQTT broker ({result_code})')
+            self.logger.warning(f"Disconnected suddenly from MQTT broker ({result_code})")
         else:
             self.logger.info("Disconnected from MQTT broker succesfully")
             self.client.loop_stop()
 
     def keep_connected(self):
-        """"method to keep client connected"""
+        """ "method to keep client connected"""
         if not self.is_connected():
             self.connection_retries += 1
             try:
@@ -82,7 +86,7 @@ class MqttClient:
 
     def connect(self):
         """method to connect client to broker"""
-        connection_timeout_s = 60 * 5 # 5 minutes
+        connection_timeout_s = 60 * 5  # 5 minutes
         time_beginning = utils.get_time()
         while not self.connected:
             try:
@@ -94,9 +98,13 @@ class MqttClient:
                 self.logger.debug(f"Have tried to connect for {time_delta} seconds")
 
                 if time_delta > connection_timeout_s:
-                    raise ConnectionError("Timeout, couldn't connect MQTT broker") from connection_error
-                self.logger.critical(f"Trying to connect, but MQTT broker not available \
-                                     {connection_error}")
+                    raise ConnectionError(
+                        "Timeout, couldn't connect MQTT broker"
+                    ) from connection_error
+                self.logger.critical(
+                    f"Trying to connect, but MQTT broker not available \
+                                     {connection_error}"
+                )
 
                 utils.sleep_ms(1000)
 
@@ -111,4 +119,3 @@ class MqttClient:
     def get_connection_retries(self):
         """check current count of reconnection retries"""
         return self.connection_retries
- 

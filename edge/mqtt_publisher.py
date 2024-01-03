@@ -17,45 +17,49 @@ def iot_ticket_formatter(data):
     """
     iot_json = {}
 
-    if data.get('identity') == 'GPGGA':
+    if data.get("identity") == "GPGGA":
         telemetry_set = {}
 
-        lat_data = {'n':'lat','dt':'double'}
-        lon_data = {'n':'lon','dt':'double'}
-        alt_data = {'n':'alt','dt':'double'}
+        lat_data = {"n": "lat", "dt": "double"}
+        lon_data = {"n": "lon", "dt": "double"}
+        alt_data = {"n": "alt", "dt": "double"}
 
-        lat_data['value'] = data.get('lat')
-        lon_data['value'] = data.get('lon')
-        alt_data['value'] = data.get('alt')
+        lat_data["value"] = data.get("lat")
+        lon_data["value"] = data.get("lon")
+        alt_data["value"] = data.get("alt")
 
         telemetry = [lat_data, lon_data, alt_data]
 
-        telemetry_set['t'] = telemetry
-        telemetry_set['id'] = secrets.TELEMETRY_ID
-        telemetry_set['ts'] = data.get('ts')
+        telemetry_set["t"] = telemetry
+        telemetry_set["id"] = secrets.TELEMETRY_ID
+        telemetry_set["ts"] = data.get("ts")
 
-        iot_json = 'location', telemetry_set
+        iot_json = "location", telemetry_set
 
-    elif data.get('identity') == 'GPVTG':
-        speed_data = {'n':'speed', 'dt':'double'}
-        data = {data.get('ts'),data.get('speed')}
+    elif data.get("identity") == "GPVTG":
+        speed_data = {"n": "speed", "dt": "double"}
+        data = {data.get("ts"), data.get("speed")}
         speed_data["data"] = [data]
 
-        iot_json = 'speed', speed_data
+        iot_json = "speed", speed_data
 
     return iot_json
+
 
 class MQTTPublisher(Thread):
     """
     Thread to publish gps positions to MQTT broker
     """
-    def __init__(self,
-                 name: str,
-                 client: MqttClient,
-                 mqtt_topic: str,
-                 redis_client:RedisConsumer,
-                 period:int=100,
-                 logger=None):
+
+    def __init__(
+        self,
+        name: str,
+        client: MqttClient,
+        mqtt_topic: str,
+        redis_client: RedisConsumer,
+        period: int = 100,
+        logger=None,
+    ):
         super().__init__(name=name)
         self.client = client
         self.mqtt_topic = mqtt_topic
@@ -87,7 +91,7 @@ class MQTTPublisher(Thread):
             if self.client.is_connected():
                 self.logger.debug("mqtt client connected")
                 last_connection_check = utils.get_time()
-                messages = self.redis_client.read_messages(count=100, block=(int(self.period/2)))
+                messages = self.redis_client.read_messages(count=100, block=(int(self.period / 2)))
 
                 self.logger.debug(f"Messages read from redis (mqtt consumer) {len(messages)}")
 
@@ -95,11 +99,11 @@ class MQTTPublisher(Thread):
 
                 for redis_data in messages:
                     topic, data = iot_ticket_formatter(redis_data)
-                    if topic == 'location':
+                    if topic == "location":
                         ts_buffer.append(data)
 
                 if len(ts_buffer) > 0:
-                    ts_json = json.dumps({'t_set': ts_buffer}, ensure_ascii=False)
+                    ts_json = json.dumps({"t_set": ts_buffer}, ensure_ascii=False)
 
                     try:
                         mqtt_message_info = self.client.publish(self.mqtt_topic, ts_json)
@@ -119,8 +123,10 @@ class MQTTPublisher(Thread):
 
                 if time_delta >= sleep_between_retry:
                     last_connection_check = utils.get_time()
-                    self.logger.critical(f"MQTT client not connected, trying to reconnect (every \
-                                         {sleep_between_retry} s)")
+                    self.logger.critical(
+                        f"MQTT client not connected, trying to reconnect (every \
+                                         {sleep_between_retry} s)"
+                    )
                     self.client.keep_connected()
 
             utils.sleep_ms(self.period)

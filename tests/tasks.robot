@@ -35,7 +35,7 @@ Get Version from the api
     ${match} =    Get Regexp Matches    ${json_string}    {"version":"(.*)"}    1
     Log    message=API Version ${match[0]}
 
-Get Last online from the api 
+Get Last online from the api
     ${response} =    GET    ${BASE_URL}/api/lastonline    headers=${CUSTOM_HEADER}
     Should Be Equal As Strings    ${response.status_code}    200
     Log    ${response.content}

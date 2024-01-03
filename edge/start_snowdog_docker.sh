@@ -13,3 +13,4 @@ nohup python /home/snowdog/nmea_testdata/emulator.py "/home/snowdog/nmea_testdat
 #nohup python /home/snowdog/nmea_testdata/emulator.py "/home/snowdog/nmea_testdata/snowdog-1.gpx" delay_test &
 
 python /home/snowdog/snowdog.py
+#ps|grep "python /home/snowdog/snowdog.py" > "snowdog-thread.info"
