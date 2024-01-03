@@ -113,6 +113,7 @@ def main():
                                           secrets.WEB_API,
                                           secrets.API_KEY,
                                           redis_rest_consumer,
+                                          period=(10 * 1000),
                                           logger=logger)
 
     nmeareader_thread.start()

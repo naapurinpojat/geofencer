@@ -6,10 +6,10 @@ import time
 import logging
 
 root = logging.getLogger()
-root.setLevel(logging.DEBUG)
+root.setLevel(logging.INFO)
 
 handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.DEBUG)
+handler.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 root.addHandler(handler)
@@ -132,6 +132,7 @@ def main(args):
                                     if i == 50:
                                         logging.info("Sleep for 4 minutes (no NMEA updates in such period)")
                                         time.sleep(4 * 60)
+                                        logging.info("return from break")
                                     if i == 100:
                                         logging.info("Same point for 10 minutes")
                                         time_start = int(time.time_ns() / 1000000000)
@@ -145,6 +146,7 @@ def main(args):
 
                                             time.sleep(1)
                                             time_end = int(time.time_ns() / 1000000000)
+                                        logging.info("returning to running normal")
                                     if i == 200:
                                         logging.info("Same point for 60 minutes")
                                         time_start = int(time.time_ns() / 1000000000)
@@ -159,6 +161,7 @@ def main(args):
 
                                             time.sleep(1)
                                             time_end = int(time.time_ns() / 1000000000)
+                                        logging.info("returning to running normal")
                                 
                                 time.sleep(1)
         else:
