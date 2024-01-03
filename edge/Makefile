@@ -26,6 +26,7 @@ $(PACKAGE_NAME): $(GIT_VERSION_PY)
 clean:
 	@echo "Cleaning up..."
 	@rm -f $(GIT_VERSION_PY) $(PACKAGE_NAME)
+	@rm -rf __pycache__
 	@echo "Cleanup complete"
 
 # PHONY targets to avoid conflicts with file names

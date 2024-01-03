@@ -1,5 +1,5 @@
 # Use a lightweight base image
-FROM alpine:latest
+FROM python:3.9-alpine
 
 RUN adduser -D -h /home/snowdog snowdog
 
@@ -13,13 +13,9 @@ RUN apk add alpine-sdk && cd /build/ && \
 RUN cd /home/snowdog && tar -xzf snowdog.tgz -C /home/snowdog/ && rm -rf /build
 
 # Install required packages
-RUN apk add --no-cache socat redis \
-    python3 python3-dev py3-pip curl \
-    && python3 -m venv /home/snowdog/venv \
-    && source /home/snowdog/venv/bin/activate \
-    && pip install --upgrade pip \
-    && pip install pyserial gpxpy \
-    && pip install -r /home/snowdog/requirements.txt
+RUN apk add --no-cache iproute2 socat redis curl
+RUN pip install --upgrade pip
+RUN pip install pyserial gpxpy
 
 # Make the start script executable
 RUN chmod +x /home/snowdog/start_snowdog_docker.sh
