@@ -32,7 +32,7 @@ The core functionality is implemented through a Python script responsible for pr
 
 ## Leafletjs Integration
 
-A one-page map, powered by Leafletjs, is utilized to present a heatmap of the route. Geofences are intelligently formed using [Geofence.io](http://www.geofence.io), and the edge software calculates the device's current location within these defined areas.
+A one-page map, powered by Leafletjs, is utilized to present a heatmap of the route. Geofences are intelligently formed using [geojson.io](https://geojson.io/), and the edge software calculates the device's current location within these defined areas.
 
 # Conclusion
 
