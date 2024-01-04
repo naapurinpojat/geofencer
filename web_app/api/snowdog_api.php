@@ -186,6 +186,36 @@ function lastDriven($obj, $request)
     echo json_encode($json);
 }
 
+function lastKnownLocation($obj, $request)
+{
+    $result = queryHelper('SELECT * FROM location_history order by ts DESC LIMIT 1;');
+    if ($result->num_rows > 0) {
+        //$json = [];
+        $jsonString = '{
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "properties": {},
+                "geometry": {
+                  "coordinates": [
+                  ],
+                  "type": "Point"
+                }
+              }
+            ]
+          }';
+        $phpObject = json_decode($jsonString);
+        while ($row = $result->fetch_assoc()) {
+            $json['lat'] = floatval($row['lat']);
+            $json['lon'] = floatval($row['lon']);
+        }
+    } else {
+    }
+
+    header('Content-Type: application/json');
+    echo json_encode($json);
+}
 /**
  * This function registers all the path handlers for the API
  */
@@ -197,5 +227,6 @@ function snowdogAPI()
     $api->registerPathHandler('location', 'POST', 'saveLocation');
     $api->registerPathHandler('geojson', 'GET', 'getGeoJSON');
     $api->registerPathHandler('lastonline', 'GET', 'lastOnline');
+    $api->registerPathHandler('lastlocation', 'GET', 'lastKnownLocation');
     $api->runPathHandlers();
 }

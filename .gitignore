@@ -14,3 +14,4 @@ snowdog-mqtt-broker/log/
 log.html
 output.xml
 report.html
+tools/*

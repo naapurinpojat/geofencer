@@ -1,5 +1,6 @@
 var map = L.map('map').setView([62.7708962631589, 22.79477884392867], 13);
 var geojsonFeature;
+var dogmarker;
 var geojsonobjects = [];
 geojsonobjects.polygons = [];
 geojsonobjects.markers = [];
@@ -139,6 +140,7 @@ function calculateOffline(timestamp) {
 }
 
 function checkColors() {
+
     axios.get('/snowdog/api/geojson', {
         headers: apiheader
     })
@@ -179,9 +181,31 @@ function checkColors() {
         .then(response => {
             // Handle the JSON data
             const dateObject = new Date(response.data.online);
-            var updatestring = 'Snowdog Tracker ' + appversion.version + '<br><i class="iconoir-antenna-signal"></i>' + calculateOffline(dateObject.getTime());
+            var updatestring = '<img src = "/snowdog/geofencer.svg" alt="Geofencer"/>';
             document.querySelector('.overlay-text-bottom').innerHTML = updatestring;
 
+        })
+        .catch(error => {
+            // Handle errors
+            console.error('Axios error:', error);
+        });
+    axios.get('/snowdog/api/lastlocation', {
+        headers: apiheader
+    })
+        .then(response => {
+            if(dogmarker == null) {
+                var dogicon = L.icon({
+                    iconUrl: 'dog.png',
+                    iconSize:     [50, 64], // size of the icon
+                    iconAnchor:   [25, 32], // point of the icon which will correspond to marker's location
+                    popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
+                });
+                dogmarker = L.marker([response.data.lat, response.data.lon],{icon: dogicon}).addTo(map);
+            }
+            else {
+                var newLatLng = new L.LatLng(response.data.lat, response.data.lon);
+                dogmarker.setLatLng(newLatLng);
+            }
         })
         .catch(error => {
             // Handle errors
