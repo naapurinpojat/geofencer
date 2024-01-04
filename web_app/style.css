@@ -60,6 +60,10 @@ body,
     font-family: 'Tahoma', 'sans-serif';
     font-size: 24px;
 }
+#scaledImage {
+    max-width: 100%; /* Make sure the image doesn't exceed the container width */
+    height: auto;    /* Maintain the aspect ratio */
+  }
 
 .leaflet-layer,
 .leaflet-control-zoom-in,

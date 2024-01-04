@@ -181,7 +181,7 @@ function checkColors() {
         .then(response => {
             // Handle the JSON data
             const dateObject = new Date(response.data.online);
-            var updatestring = '<img src = "/snowdog/geofencer.svg" alt="Geofencer"/>';
+            var updatestring = '<img id="scaledImage" src = "/snowdog/geofencer.svg" height="50" alt="Geofencer"/>';
             document.querySelector('.overlay-text-bottom').innerHTML = updatestring;
 
         })
