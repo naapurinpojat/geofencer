@@ -11,3 +11,7 @@ repos:
   hooks:
     - id: black
       args: [--line-length=100,--skip-magic-trailing-comma,--safe,--target-version=py38]
+- repo: https://github.com/MarketSquare/robotframework-tidy
+  rev: '4.7.0'
+  hooks:
+    - id: robotidy

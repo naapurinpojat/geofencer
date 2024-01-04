@@ -1,34 +1,27 @@
 *** Settings ***
-Library    RequestsLibrary
-Library    String
-Library    DateTime
-Library    Collections
-Library    OperatingSystem
+Library     RequestsLibrary
+Library     String
+Library     DateTime
+Library     Collections
+Library     OperatingSystem
 
-Test Setup
 
 *** Variables ***
 ${ROBOT_RUN_ID}     1234
 ${BASE_URL}         http://localhost/snowdog
 &{CUSTOM_HEADER}    Authorization=0028b076-ca97-44c5-9603-bdfc38e2718e    Content-Type=application/json
 
-*** Keywords ***
-Setup Test
-    Environment Variable Should Be Set    SERVER_ADDR
-    ${value}=    Get Environment Variable    SERVER_ADDR
-    Set Global Variable     ${BASE_URL}    http://${value}/snowdog
-    # Implement any setup steps here
 
 *** Test Cases ***
 Setup the test environment
     Run Keyword And Ignore Error    Setup Test
 
 Generate Random ROBOT_RUN_ID ID for POST data
-    ${rnd} =	Generate Random String	5-10	# Generates a string 5 to 10 characters long
+    ${rnd} =    Generate Random String    5-10    # Generates a string 5 to 10 characters long
     Set Global Variable    ${ROBOT_RUN_ID}    ${rnd}
 
 Get Version from the api
-    ${current_date}=    Get Current Date
+    ${current_date} =    Get Current Date
     ${response} =    GET    ${BASE_URL}/api/version    headers=${CUSTOM_HEADER}
     Should Be Equal As Strings    ${response.status_code}    200
     ${json_string} =    Decode Bytes To String    ${response.content}    ASCII    errors=ignore
@@ -59,9 +52,15 @@ Get last known location
     Log    ${response.content}
 
 Post location to the api
-    ${current_date}=    Get Current Date
-    ${formatted_date}=    Convert Date    ${current_date}    result_format=%Y-%m-%dT%H:%M:%S.000Z
-    ${dummydata} =    Create Dictionary    lat=62.8059224833    lon=22.9163893333    alt=44.2    speed=0    ts=${formatted_date}    in_area=${ROBOT_RUN_ID}
+    ${current_date} =    Get Current Date
+    ${formatted_date} =    Convert Date    ${current_date}    result_format=%Y-%m-%dT%H:%M:%S.000Z
+    ${dummydata} =    Create Dictionary
+    ...    lat=62.8059224833
+    ...    lon=22.9163893333
+    ...    alt=44.2
+    ...    speed=0
+    ...    ts=${formatted_date}
+    ...    in_area=${ROBOT_RUN_ID}
     ${response} =    POST    ${BASE_URL}/api/location    headers=${CUSTOM_HEADER}    json=${dummydata}
     Should Be Equal As Strings    ${response.status_code}    200
     ${json_string} =    Decode Bytes To String    ${response.content}    ASCII    errors=ignore
@@ -72,4 +71,12 @@ Check that ROBOT_RUN_ID exists in the API
     Should Be Equal As Strings    ${response.status_code}    200
     ${json} =    Decode Bytes To String    ${response.content}    ASCII    errors=ignore
     ${match} =    Get Regexp Matches    ${json}    .+(${ROBOT_RUN_ID}).+    1
-    Log     ${match}
+    Log    ${match}
+
+
+*** Keywords ***
+Setup Test
+    Environment Variable Should Be Set    SERVER_ADDR
+    ${value} =    Get Environment Variable    SERVER_ADDR
+    Set Global Variable    ${BASE_URL}    http://${value}/snowdog
+    # Implement any setup steps here
