@@ -2,12 +2,14 @@
 
 <p align="center">
 <img src='logo/geofencer.svg' width='700'><br><br>
-<a title="Code Size" target="_blank" href="https://github.com/bittikettu/snowdog"><img src="https://img.shields.io/github/languages/code-size/bittikettu/snowdog.svg?style=flat-square&color=yellow"></a>
-<img alt="GitHub commit activity (branch)" src="https://img.shields.io/github/commit-activity/m/bittikettu/snowdog">
-<a title="GitHub Pull Requests" target="_blank" href="https://github.com/bittikettu/snowdog/pulls"><img src="https://img.shields.io/github/issues-pr-closed/bittikettu/snowdog.svg?style=flat-square&color=FF9966"></a>
-<img alt="GitHub License" src="https://img.shields.io/github/license/bittikettu/snowdog">
-<a title="Last Commit" target="_blank" href="https://github.com/bittikettu/snowdog/commits/master"><img src="https://img.shields.io/github/last-commit/bittikettu/snowdog.svg?style=flat-square&color=FF9900"></a>
-<a title="Hits" target="_blank" href="https://github.com/bittikettu/snowdog"><img src="https://hits.b3log.org/bittikettu/snowdog.svg"></a>
+<a title="Code Size" target="_blank" href="https://github.com/naapurinpojat/geofencer"><img src="https://img.shields.io/github/languages/code-size/naapurinpojat/geofencer.svg?style=flat-square&color=yellow"></a>
+<img alt="GitHub commit activity (branch)" src="https://img.shields.io/github/commit-activity/m/naapurinpojat/geofencer">
+<a title="GitHub Pull Requests" target="_blank" href="https://github.com/naapurinpojat/geofencer/pulls"><img src="https://img.shields.io/github/issues-pr-closed/naapurinpojat/geofencer.svg?style=flat-square&color=FF9966"></a>
+<img alt="GitHub License" src="https://img.shields.io/github/license/naapurinpojat/geofencer">
+<a title="Last Commit" target="_blank" href="https://github.com/naapurinpojat/geofencer/commits/master"><img src="https://img.shields.io/github/last-commit/naapurinpojat/geofencer.svg?style=flat-square&color=FF9900"></a>
+<a title="Hits" target="_blank" href="https://github.com/naapurinpojat/geofencer"><img src="https://hits.b3log.org/naapurinpojat/geofencer.svg"></a>
+    <img alt="GitHub tag (with filter)" src="https://img.shields.io/github/v/tag/naapurinpojat/geofencer">
+
 </p>
 
 
