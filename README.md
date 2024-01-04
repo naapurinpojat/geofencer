@@ -1,3 +1,16 @@
+
+
+<p align="center">
+<img src='logo/geofencer.svg' width='700'><br><br>
+<a title="Code Size" target="_blank" href="https://github.com/bittikettu/snowdog"><img src="https://img.shields.io/github/languages/code-size/bittikettu/snowdog.svg?style=flat-square&color=yellow"></a>
+<img alt="GitHub commit activity (branch)" src="https://img.shields.io/github/commit-activity/m/bittikettu/snowdog">
+<a title="GitHub Pull Requests" target="_blank" href="https://github.com/bittikettu/snowdog/pulls"><img src="https://img.shields.io/github/issues-pr-closed/bittikettu/snowdog.svg?style=flat-square&color=FF9966"></a>
+<img alt="GitHub License" src="https://img.shields.io/github/license/bittikettu/snowdog">
+<a title="Last Commit" target="_blank" href="https://github.com/bittikettu/snowdog/commits/master"><img src="https://img.shields.io/github/last-commit/bittikettu/snowdog.svg?style=flat-square&color=FF9900"></a>
+<a title="Hits" target="_blank" href="https://github.com/bittikettu/snowdog"><img src="https://hits.b3log.org/bittikettu/snowdog.svg"></a>
+</p>
+
+
 # Snowdog Geospatial Data Collection System
 
 The **Snowdog Geospatial Data Collection System** is a sophisticated solution designed for mountainbikers to track the condition of the winter trail driven by the Snowdog. Utilizing the Snowdog device, this system integrates various technologies to provide up-to-date trail information, ensuring a seamless user experience.
@@ -19,11 +32,30 @@ The system relies on the ECM2040, a commercial product offered by [Exertus.fi](h
 The system adopts a Producer-Consumer model on the edge side, incorporating a streamlined flow of data. A PHP backend is employed to store data in a MySQL database, providing a reliable and familiar infrastructure. A Python script processes NMEA data, placing it into a queue, and leveraging Redis streams for efficient data flow. Finally, consumer groups retrieve and push the information to various destinations, including the utilization of [IoT-Ticket.com](http://iot-ticket.com) for comprehensive visualization.
 
 ```mermaid
-  graph TD;
-      A-->B;
-      A-->C;
-      B-->D;
-      C-->D;
+flowchart TD
+    C{redis}
+    subgraph ECM2040
+        A[GPS device] -->|Parse NMEA data| B(Redis)
+        B <--> C{Redis consumers}
+    end
+
+        subgraph IOT
+            M{IoT Ticket}
+
+        end
+        subgraph WEBSITE
+            MAP
+        end
+        subgraph API
+            J{Cloud API}
+            MYSQL
+            J --> MYSQL
+        end
+        C -->|http POST| API;
+        MAP <-->|http GET| API;
+        C -->|MQTT| IOT[IoT Ticket]
+
+
 ```
 
 ## Technical Specifications
@@ -49,4 +81,4 @@ docker run --network=snowdog_mynetwork -it --rm -v $(pwd):/tests snowdog-rpa-sno
 ```
 
 # Map of the dog
-![Screenshot](snowdog.png)
+![Screenshot](geofencer_screenshot.png)
