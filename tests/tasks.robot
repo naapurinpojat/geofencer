@@ -53,6 +53,11 @@ Download fences
     Should Be Equal As Strings    ${response.status_code}    200
     Log    ${response.content}
 
+Get last known location
+    ${response} =    GET    ${BASE_URL}/api/lastlocation    headers=${CUSTOM_HEADER}
+    Should Be Equal As Strings    ${response.status_code}    200
+    Log    ${response.content}
+
 Post location to the api
     ${current_date}=    Get Current Date
     ${formatted_date}=    Convert Date    ${current_date}    result_format=%Y-%m-%dT%H:%M:%S.000Z
