@@ -1,9 +1,11 @@
 """Hold secrets used in docker"""
 MY_DEVICE = "snowdog_1"
-MY_PWD = "test_password_1234"
+MY_PWD = ""
 MY_TENANT = "random"
+USERNAME = ""
 HTTP_ADAPTER_IP = "snowdog-mqtt-broker"
 MQTT_PORT = 1883
+MQTT_CLIENT = "virtual_snowdog"
 CERT_FILE = ""
 TELEMETRY_ID = "gpslatlonalt"
 

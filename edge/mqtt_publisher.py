@@ -77,8 +77,6 @@ class MQTTPublisher(Thread):
     def run(self):
         self.logger.info("MQTTPublisher starting")
         last_connection_check = utils.get_time()
-        sleep_between_retries_lookup = {"under_10": 1, "from_10_to_50": 5, "over_50": 10}
-        sleep_between_retry = sleep_between_retries_lookup.get("under_10")
 
         try:
             self.client.connect()
@@ -113,19 +111,11 @@ class MQTTPublisher(Thread):
                         self.logger.critical(rterr)
 
             else:
-                retries = self.client.get_connection_retries()
-                if retries < 10:
-                    sleep_between_retry = sleep_between_retries_lookup.get("under_10")
-                elif 10 <= retries <= 50:
-                    sleep_between_retry = sleep_between_retries_lookup.get("from_10_to_50")
-                else:
-                    sleep_between_retry = sleep_between_retries_lookup.get("over_50")
-
-                if time_delta >= sleep_between_retry:
+                if time_delta >= self.client.get_connection_timeout():
                     last_connection_check = utils.get_time()
                     self.logger.critical(
                         f"MQTT client not connected, trying to reconnect (every \
-                                         {sleep_between_retry} s)"
+                                         {self.client.get_connection_timeout()} s)"
                     )
                     self.client.keep_connected()
 
