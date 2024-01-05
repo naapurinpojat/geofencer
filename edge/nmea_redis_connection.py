@@ -191,7 +191,7 @@ class RedisPublisher(Thread):
                 data["lat"] = raw_data.lat
                 data["lon"] = raw_data.lon
                 data["alt"] = raw_data.alt
-        except KeyError as error:
+        except (KeyError, ValueError) as error:
             data = None
             self.logger.debug(error)
 
