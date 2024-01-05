@@ -31,15 +31,15 @@ class MqttClient:
         self.connection_retries = 0
 
         self.client = pahomqtt.Client(self.client_id, protocol=pahomqtt.MQTTv5)
+        self.client._connect_timeout = 70  # It might take a while to connect mqtt broker
 
-        if int(os.getenv("VIRTUAL_SNOWDOG", "0")) == 0:
-            if ssl_file:
-                self.context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-                self.context.load_verify_locations(ssl_file)
-                self.client.tls_set_context(self.context)
+        if ssl_file and ssl_file != "":
+            self.context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+            self.context.load_verify_locations(ssl_file)
+            self.client.tls_set_context(self.context)
 
-            if username and password:
-                self.client.username_pw_set(username, password)
+        if username and password and len(username) > 1 and password != "":
+            self.client.username_pw_set(username, password)
 
         self.client.on_connect = self.on_connect
         self.client.on_disconnect = self.on_disconnect
@@ -86,27 +86,37 @@ class MqttClient:
 
     def connect(self):
         """method to connect client to broker"""
+        loop_started = False
         connection_timeout_s = 60 * 5  # 5 minutes
         time_beginning = utils.get_time()
+        try_again = False
         while not self.connected:
-            try:
-                self.client.connect(self.broker_address, self.broker_port)
-                self.client.loop_start()
+            if (
+                (utils.timedelta_seconds(time_beginning) >= self.get_connection_timeout())
+                or not loop_started
+                or try_again
+            ):
+                try_again = False
+                try:
+                    self.client.connect(self.broker_address, self.broker_port)
+                    if not loop_started:
+                        self.client.loop_start()
+                        loop_started = True
 
-            except socket.gaierror as connection_error:
-                time_delta = utils.timedelta_seconds(time_beginning)
-                self.logger.debug(f"Have tried to connect for {time_delta} seconds")
+                except (socket.gaierror, socket.timeout) as connection_error:
+                    time_delta = utils.timedelta_seconds(time_beginning)
+                    self.logger.debug(f"Have tried to connect for {time_delta} seconds")
 
-                if time_delta > connection_timeout_s:
-                    raise ConnectionError(
-                        "Timeout, couldn't connect MQTT broker"
-                    ) from connection_error
-                self.logger.critical(
-                    f"Trying to connect, but MQTT broker not available \
-                                     {connection_error}"
-                )
+                    self.logger.critical(
+                        f"Trying to connect, but MQTT broker not available \
+                                        {connection_error}"
+                    )
 
-                utils.sleep_ms(1000)
+                    utils.sleep_ms(2000)
+                    try_again = True
+
+            if utils.timedelta_seconds(time_beginning) >= connection_timeout_s:
+                raise ConnectionError("Timeout, couldn't connect MQTT broker")
 
     def disconnect(self):
         """method to disconnect client"""
@@ -119,3 +129,6 @@ class MqttClient:
     def get_connection_retries(self):
         """check current count of reconnection retries"""
         return self.connection_retries
+    
+    def get_connection_timeout(self):
+        return self.client._connect_timeout

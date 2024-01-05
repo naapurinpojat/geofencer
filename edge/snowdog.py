@@ -54,8 +54,6 @@ def main():
 
     - Initialize clients
     - Create threads where connections is handled
-    - Update global time
-    - If thread fails, try to restart it
 
     Returns:
         None
@@ -72,8 +70,8 @@ def main():
     mqtt_client = MqttClient(
         secrets.HTTP_ADAPTER_IP,
         secrets.MQTT_PORT,
-        None,
-        f"{secrets.MY_DEVICE}@{secrets.MY_TENANT}",
+        secrets.MQTT_CLIENT,
+        secrets.USERNAME,
         secrets.MY_PWD,
         ssl_file=secrets.CERT_FILE,
         logger=logger,
