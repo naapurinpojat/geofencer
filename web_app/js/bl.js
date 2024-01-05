@@ -111,7 +111,7 @@ function calculateColorForMarker(timestamp) {
     const currentTime = new Date().getTime();
     const timeDifference = currentTime - timestamp;
 
-    // Maximum time for a full transition to red 3 minutes in milliseconds)
+    // Maximum time for a full transition to red 4 minutes in milliseconds)
     const maxTimeForFullRed = 4 * 60 * 1000;
 
     if (timeDifference < maxTimeForFullRed) {
@@ -122,19 +122,19 @@ function calculateColorForMarker(timestamp) {
     }
 }
 
-function calculateOffline(timestamp) {
+function isSystemOnline(timestamp) {
     // Calculate the time difference in milliseconds
     const currentTime = new Date().getTime();
     const timeDifference = currentTime - timestamp;
 
-    // Maximum time for a full transition to red 3 minutes in milliseconds)
+    // Maximum time for a full transition to red 4 minutes in milliseconds)
     const maxTimeForFullRed = 4 * 60 * 1000;
 
     if (timeDifference < maxTimeForFullRed) {
-        return "Online";
+        return true;
     }
     else {
-        return "Offline";
+        return false;
     }
 
 }
@@ -193,18 +193,40 @@ function checkColors() {
         headers: apiheader
     })
         .then(response => {
+            console.log(response.data);
+            var dogicon_online = L.icon({
+                iconUrl: 'dog_online.png',
+                iconSize:     [50, 64], // size of the icon
+                iconAnchor:   [25, 32], // point of the icon which will correspond to marker's location
+                popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
+            });
+            var dogicon_offline = L.icon({
+                iconUrl: 'dog_offline.png',
+                iconSize:     [50, 64], // size of the icon
+                iconAnchor:   [25, 32], // point of the icon which will correspond to marker's location
+                popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
+            });
             if(dogmarker == null) {
-                var dogicon = L.icon({
-                    iconUrl: 'dog.png',
-                    iconSize:     [50, 64], // size of the icon
-                    iconAnchor:   [25, 32], // point of the icon which will correspond to marker's location
-                    popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
-                });
-                dogmarker = L.marker([response.data.lat, response.data.lon],{icon: dogicon}).addTo(map);
+
+                dogmarker = L.marker([response.data.lat, response.data.lon]).addTo(map);
+                const dateObject = new Date(response.data.ts);
+                if(isSystemOnline(dateObject.getTime())) {
+                    dogmarker.setIcon(dogicon_online);
+                }
+                else {
+                    dogmarker.setIcon(dogicon_offline);
+                }
             }
             else {
                 var newLatLng = new L.LatLng(response.data.lat, response.data.lon);
                 dogmarker.setLatLng(newLatLng);
+                const dateObject = new Date(response.data.ts);
+                if(isSystemOnline(dateObject.getTime())) {
+                    dogmarker.setIcon(dogicon_online);
+                }
+                else {
+                    dogmarker.setIcon(dogicon_offline);
+                }
             }
         })
         .catch(error => {

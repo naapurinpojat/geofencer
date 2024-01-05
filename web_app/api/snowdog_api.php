@@ -190,25 +190,10 @@ function lastKnownLocation($obj, $request)
 {
     $result = queryHelper('SELECT * FROM location_history order by ts DESC LIMIT 1;');
     if ($result->num_rows > 0) {
-        //$json = [];
-        $jsonString = '{
-            "type": "FeatureCollection",
-            "features": [
-              {
-                "type": "Feature",
-                "properties": {},
-                "geometry": {
-                  "coordinates": [
-                  ],
-                  "type": "Point"
-                }
-              }
-            ]
-          }';
-        $phpObject = json_decode($jsonString);
         while ($row = $result->fetch_assoc()) {
             $json['lat'] = floatval($row['lat']);
             $json['lon'] = floatval($row['lon']);
+            $json['ts'] = $row['ts'];
         }
     } else {
     }
