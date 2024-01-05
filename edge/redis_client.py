@@ -46,16 +46,17 @@ class RedisClient:
         self.redis = redis.Redis(host=host, port=port, decode_responses=True)
 
         start_time = datetime.datetime.now()
+        wait_redis = Event()
         while True:
             time_diff = datetime.datetime.now() - start_time
             info = self.redis.info()
             if info.get("loading", 1) == 1:
                 # Block execution until redis connection is loaded
-                Event.wait(1)
+                wait_redis.wait(1)
             else:
                 break
 
-            if time_diff.total_seconds() >= 60:
+            if time_diff.total_seconds() >= 60 * 5:
                 logger.critical("Couldn't establish connection to redis")
                 return None
 
