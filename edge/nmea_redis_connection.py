@@ -58,10 +58,13 @@ def process_data(que, data, logger):
     _ = logger  # unused
     data_to_process = ["GPGGA", "GPVTG"]
     # logger.debug(data)
-    if data.quality == 1:
-        if data.identity in data_to_process:
-            # logger.debug(data)
-            que.put_nowait(data)
+    try:
+        if data.quality == 1:
+            if data.identity in data_to_process:
+                # logger.debug(data)
+                que.put_nowait(data)
+    except AttributeError as attr_error:
+        logger.debug(f"Attribute error {attr_error}")
 
 
 class NMEAStreamReader(Thread):
